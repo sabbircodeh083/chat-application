@@ -55,8 +55,6 @@ async function login(req, res, next) {
       throw createError("Login Faild!! please try again");
     }
   } catch (err) {
-    //todo
-    console.log(err);
     res.render("index", {
       data: {
         username: req.body.username,

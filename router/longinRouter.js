@@ -8,10 +8,19 @@ const {
   doLoginValidator,
   doLoginValidationHandler,
 } = require("../middlerwares/login/loginValidator");
+const {
+  allreadyAuthorizedHandler,
+} = require("../middlerwares/common/authHandler");
 
 const router = express.Router();
 
-router.get("/", decorateHtmlRespose("Login"), getLogin);
+router.get(
+  "/",
+  decorateHtmlRespose("Login"),
+  allreadyAuthorizedHandler,
+  getLogin,
+);
+
 router.post(
   "/",
   decorateHtmlRespose("Login"),

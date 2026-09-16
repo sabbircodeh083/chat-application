@@ -17,7 +17,7 @@
       <% if(loggedInUser && loggedInUser.username){ %>
         <div class="menu-item"><a href="/inbox">Inbox</a></div>
       <div class="menu-item"><a href="/users">Users</a></div>
-      <div class="menu-item"><a href="/" onclick=logoutRequest() >Logout</a></div>
+      <div class="menu-item"><a href="#" onclick="logoutRequest(event)" >Logout</a></div>
         <%}else{%>
       <div class="menu-item"><a href="/inbox">Inbox</a></div>
       <div class="menu-item"><a href="/users">Users</a></div>
@@ -26,14 +26,16 @@
     </div>
 
     <Script> 
-      function logoutRequest(){
-        //create toast
-        const logoutToast=toastify({
+      const logoutToast=Toastify({
           text:"Logout successfull",
           duration:1000
         });
+      async function logoutRequest(event){
+        event.preventDefault();
+        //create toast
+        
         //send request
-        fetch("/",{
+        await fetch("/",{
           method:"DELETE"
         });
         //show toast 

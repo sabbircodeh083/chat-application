@@ -13,19 +13,25 @@ const {
   addUserValidators,
   addUserValidationHandler,
 } = require("../middlerwares/users/userValidators");
+const { authHandler } = require("../middlerwares/common/authHandler");
 
+//initial router
 const router = express.Router();
 
-router.get("/", decorateHtmlRespose("Users"), getUsers);
+//send get request
+router.get("/", decorateHtmlRespose("Users"), authHandler, getUsers);
 
+//send post request
 router.post(
   "/",
+  authHandler,
   avatarUpload,
   addUserValidators,
   addUserValidationHandler,
   addUser,
 );
 
-router.delete("/:id", removeUser);
+//send delete request
+router.delete("/:id", authHandler, removeUser);
 
 module.exports = router;
