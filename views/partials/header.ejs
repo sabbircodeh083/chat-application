@@ -14,9 +14,35 @@
   </head>
   <body>
     <div class="menu">
+      <% if(loggedInUser && loggedInUser.username){ %>
+        <div class="menu-item"><a href="/inbox">Inbox</a></div>
+      <div class="menu-item"><a href="/users">Users</a></div>
+      <div class="menu-item"><a href="/" onclick=logoutRequest() >Logout</a></div>
+        <%}else{%>
       <div class="menu-item"><a href="/inbox">Inbox</a></div>
       <div class="menu-item"><a href="/users">Users</a></div>
       <div class="menu-item"><a href="/">Login</a></div>
+      <%}%>
     </div>
+
+    <Script> 
+      function logoutRequest(){
+        //create toast
+        const logoutToast=toastify({
+          text:"Logout successfull",
+          duration:1000
+        });
+        //send request
+        fetch("/",{
+          method:"DELETE"
+        });
+        //show toast 
+        logoutToast.showToast();
+
+        setTimeout(() => {
+          window.location.replace("/")
+        }, 1000);
+      }
+    </Script>
     <!-- prettier-ignore -->
   
