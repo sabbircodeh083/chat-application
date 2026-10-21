@@ -1,0 +1,137 @@
+<div class="modal-wrapper" id="add-conversation-modal">
+  <div class="modal">
+    <a onclick="closeModal()" class="modal-close">+</a>
+    <div class="modal-title">
+      <h2>Create New Conversation</h2>
+    </div>
+    <div class="modal-body">
+      <form id="add-conversation-form">
+        <input
+          type="text"
+          placeholder="search user by name or email or mobile"
+          name="user"
+          id="user"
+          autocomplete="off"
+        />
+        <p class="error"></p>
+        <div class="search_users"></div>
+        <input type="submit" value="Submit" class="hide" />
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  //catch all necessary element
+  const modal = document.querySelector("#add-conversation-modal");
+  const input = document.querySelector("input#user");
+  const users_placeholder = document.querySelector(".search_users");
+  const doneTypingInterval = 500; //duration for searching
+  let typingTimer; //setTimeout function
+  const error_placeholder = document.querySelector("p.error");
+
+  //open the modal
+  function openModal() {
+    modal.style.display = "block";
+  }
+  //close modal
+  function closeModal() {
+    modal.style.display = "none";
+    input.value = "";
+    users_placeholder.style.display = "none";
+  }
+
+  //serch for user according to countdown
+  input.addEventListener("keyup", () => {
+    clearTimeout(typingTimer);
+    users_placeholder.style.display = "none";
+    if (input.value) {
+      typingTimer = setTimeout(searchUsers, doneTypingInterval);
+    }
+  });
+
+  async function searchUsers() {
+    error_placeholder.style.display = "none";
+    const response = await fetch("/inbox/search", {
+      method: "POST",
+      body: JSON.stringify({ user: input.value }),
+      headers: {
+        "content-type": "application/json; charset=UTF-8",
+      },
+    });
+
+    const result = await response.json();
+
+    if (!result.errors) {
+      let generateHTML = "<ul>";
+      result.forEach((user) => {
+        const avatar = user.avatar
+          ? `./uploads/avatars/${user.avatar}`
+          : "./images/nophoto.png";
+
+        generateHTML += `<li onclick="createConversation('${user._id}','${user.name}','${user.avatar || ""}')">
+                <div class="user" >
+                  <div class="avatar" > <img src="${avatar}" alt="some" /></div>
+                  <div class="username" >${user.name}</div>
+                </div>
+              </li>`;
+      });
+      generateHTML += "</ul>";
+
+      users_placeholder.innerHTML = generateHTML;
+      users_placeholder.style.display = "block";
+    } else {
+      error_placeholder.innerHTML = result.errors.common.msg;
+      error_placeholder.style.display = "block";
+    }
+  }
+
+  // conversation created failure toast
+  const conversationFailureToast = Toastify({
+    text: "Error creating a conversation!",
+    duration: 1000,
+  });
+  //conversation created success toast
+  // conversation created failure toast
+  const conversationSuccessToast = Toastify({
+    text: "Conversation has Created!",
+    duration: 1000,
+  });
+
+  async function createConversation(
+    participant_id,
+    participant_name,
+    participant_avatar,
+  ) {
+    try {
+      //send request to create conversation
+      const response = await fetch("/inbox/conversation", {
+        method: "POST",
+        body: JSON.stringify({
+          participant_id,
+          participant_name,
+          participant_avatar: participant_avatar ? participant_avatar : null,
+        }),
+        headers: {
+          "content-type": "application/json; charset=UTF-8",
+        },
+      });
+
+      const result = response.json();
+      if (!result.errors) {
+        //clear user placehoalder and search input field
+        ((users_placeholder.style.display = "none"), (input.value = name));
+        //show success toast
+        conversationSuccessToast.showToast();
+        //reload the page
+        setTimeout(() => {
+          location.reload();
+        }, 1000);
+      } else {
+        throw new Error(result.errors.common.msg);
+      }
+    } catch (err) {
+      conversationFailureToast.showToast();
+    }
+  }
+</script>

@@ -2,12 +2,30 @@
 const express = require("express");
 
 //internal Import
-const { getInbox } = require("../controller/inboxController");
+const {
+  getInbox,
+  searchUser,
+  addConversation,
+  getMessages,
+  sendMessage,
+} = require("../controller/inboxController");
 const decorateHtmlRespose = require("../middlerwares/common/decorateHtmlResponse");
-const { authHandler } = require("../middlerwares/common/authHandler");
+const {
+  authenticationHandler,
+} = require("../middlerwares/common/authenticationHandler");
+const attachmentUpload = require("../middlerwares/inbox/attachmentUpload");
 
 const router = express.Router();
 
-router.get("/", decorateHtmlRespose("Inbox"), authHandler, getInbox);
-
+//get the inbox page
+router.get("/", decorateHtmlRespose("Inbox"), authenticationHandler, getInbox);
+//search user for create a conversation
+router.post("/search", authenticationHandler, searchUser);
+//create a new conversation for between participators
+router.post("/conversation", authenticationHandler, addConversation);
+//get all messages
+router.get("/messages/:conversationId", authenticationHandler, getMessages);
+// send message
+router.post("/message", authenticationHandler, attachmentUpload, sendMessage);
+//exports the router
 module.exports = router;

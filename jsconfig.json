@@ -1,0 +1,9 @@
+{
+  "compilerOptions": {
+    "checkJs": true,
+    "noEmit": true,
+    "strict": false
+  },
+  "include": ["**/*.js"],
+  "exclude": ["node_modules"]
+}

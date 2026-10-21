@@ -9,15 +9,16 @@ const {
   doLoginValidationHandler,
 } = require("../middlerwares/login/loginValidator");
 const {
-  allreadyAuthorizedHandler,
-} = require("../middlerwares/common/authHandler");
+  allreadyAuthenticatedHandler,
+} = require("../middlerwares/common/authenticationHandler");
+const { getInbox } = require("../controller/inboxController");
 
 const router = express.Router();
 
 router.get(
   "/",
   decorateHtmlRespose("Login"),
-  allreadyAuthorizedHandler,
+  allreadyAuthenticatedHandler,
   getLogin,
 );
 

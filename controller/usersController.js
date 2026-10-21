@@ -1,5 +1,5 @@
 const bcrypt = require("bcrypt");
-const userModel = require("../model/people.js");
+const userModel = require("../model/People.js");
 const {
   addUser: addUserCURD,
   getAllUsers,

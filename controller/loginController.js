@@ -4,7 +4,7 @@ const createError = require("http-errors");
 const jwt = require("jsonwebtoken");
 
 //jinternal Import
-const User = require("../model/people");
+const User = require("../model/People");
 
 // get Login
 function getLogin(req, res, next) {
@@ -26,10 +26,11 @@ async function login(req, res, next) {
       if (isValidPassword) {
         //prepare the user object to generate token
         const userObject = {
+          userid: user._id,
           username: user.name,
           email: user.email,
-          mobile: user.mobile,
-          role: "user",
+          avatar: user.avatar || null,
+          role: user.role || "user",
         };
 
         // generate token
@@ -44,10 +45,11 @@ async function login(req, res, next) {
           httpOnly: true,
         });
 
-        //set user data and render inbox
-        res.render("inbox", {
-          loggedInUser: userObject,
-        });
+        // set logged in user local identifier
+        res.locals.loggedInUser = userObject;
+
+        // redirect to inbox
+        res.redirect("inbox");
       } else {
         throw createError("Login Faild!! please try again");
       }

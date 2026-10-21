@@ -6,6 +6,7 @@ function decorateHtmlRespose(page_title) {
     res.locals.html = true;
     res.locals.loggedInUser = {};
     res.locals.errors = {};
+    res.locals.Cdata = [];
     res.locals.data = {};
     next();
   };
