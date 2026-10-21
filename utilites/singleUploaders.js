@@ -1,4 +1,5 @@
 //external import
+const fs = require("fs");
 const path = require("path");
 const multer = require("multer");
 const create = require("http-errors");
@@ -10,6 +11,9 @@ const uploader = function (subfolder, fileTypes, fileSize, errorMessage) {
     __dirname,
     `../public/uploads/${subfolder}`,
   );
+
+  // make sure the upload folder exists
+  fs.mkdirSync(filedirectory, { recursive: true });
 
   const storage = multer.diskStorage({
     destination: (req, file, cb) => {

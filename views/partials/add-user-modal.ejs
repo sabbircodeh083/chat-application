@@ -19,7 +19,23 @@
         <p class="error mobile-error"></p>
         <input type="password" placeholder="enter password" name="password" />
         <p class="error password-error"></p>
-        <input type="file" name="avatar" />
+        <input
+          type="file"
+          name="avatar"
+          accept="image/png,image/jpeg,image/webp,image/gif"
+        />
+        <div class="avatar-selected" id="avatar-selected">
+          <img id="avatar-preview-image" alt="Selected avatar" />
+          <span id="avatar-preview-name"></span>
+          <button
+            type="button"
+            id="avatar-remove"
+            class="attachment-chip-remove"
+            aria-label="Remove selected image"
+          >
+            &times;
+          </button>
+        </div>
         <p class="error avatar-error"></p>
         <input type="submit" value="Submit" />
         <p class="error common-error"></p>
@@ -44,6 +60,71 @@
 
   const form = document.querySelector("#add-user-form");
 
+  // avatar selection preview + remove
+  // keep these in sync with middlerwares/users/avatarupload.js
+  const MAX_AVATAR_SIZE = 5 * 1024 * 1024; // 5 MB
+  const ALLOWED_AVATAR_TYPES = [
+    "image/jpeg",
+    "image/jpg",
+    "image/png",
+    "image/webp",
+    "image/gif",
+  ];
+
+  const avatarInput = form.querySelector('[name="avatar"]');
+  const avatarSelected = document.querySelector("#avatar-selected");
+  const avatarPreviewImage = document.querySelector("#avatar-preview-image");
+  const avatarPreviewName = document.querySelector("#avatar-preview-name");
+  const avatarError = document.querySelector(".avatar-error");
+  let avatarObjectUrl = null;
+
+  function formatFileSize(bytes) {
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+    return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+  }
+
+  function renderAvatarPreview() {
+    const file = avatarInput.files[0];
+
+    if (avatarObjectUrl) {
+      URL.revokeObjectURL(avatarObjectUrl);
+      avatarObjectUrl = null;
+    }
+
+    if (!file) {
+      avatarSelected.classList.remove("is-visible");
+      avatarPreviewImage.removeAttribute("src");
+      avatarPreviewName.textContent = "";
+      return;
+    }
+
+    avatarObjectUrl = URL.createObjectURL(file);
+    avatarPreviewImage.src = avatarObjectUrl;
+    avatarPreviewName.textContent =
+      file.name + " (" + formatFileSize(file.size) + ")";
+    avatarSelected.classList.add("is-visible");
+  }
+
+  avatarInput.addEventListener("change", () => {
+    avatarError.style.display = "none";
+    avatarError.textContent = "";
+    renderAvatarPreview();
+  });
+
+  document.querySelector("#avatar-remove").addEventListener("click", () => {
+    avatarInput.value = "";
+    avatarError.style.display = "none";
+    avatarError.textContent = "";
+    renderAvatarPreview();
+  });
+
+  function showAvatarError(message) {
+    avatarError.textContent = message;
+    avatarError.style.display = "block";
+    avatarInput.classList.add("error");
+  }
+
   form.onsubmit = async function (event) {
     event.preventDefault();
 
@@ -63,6 +144,27 @@
     });
 
     const commonError = document.querySelector(".common-error");
+
+    // validate the selected avatar before uploading
+    const avatarFile = avatarInput.files[0];
+    if (avatarFile) {
+      if (!ALLOWED_AVATAR_TYPES.includes(avatarFile.type)) {
+        showAvatarError(
+          "Only .jpg, .jpeg, .png, .webp or .gif images are allowed!",
+        );
+        return;
+      }
+      if (avatarFile.size > MAX_AVATAR_SIZE) {
+        showAvatarError(
+          avatarFile.name +
+            " is " +
+            formatFileSize(avatarFile.size) +
+            " - maximum size is " +
+            formatFileSize(MAX_AVATAR_SIZE),
+        );
+        return;
+      }
+    }
 
     try {
       //send the request to the server
@@ -103,6 +205,7 @@
       } else {
         closeModal();
         form.reset();
+        renderAvatarPreview();
         successToast.showToast();
 
         setTimeout(() => {

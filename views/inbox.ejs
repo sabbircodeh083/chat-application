@@ -53,8 +53,20 @@
       <!-- send message form -->
       <form id="chat-form" method="post" enctype="multipart/form-data">
         <label for="attachment"><img src="./images/attachment.png" alt="Add Attachment" /></label>
-        <input type="file" multiple name="attachment" class="hide" id="attachment" />
+        <input
+          type="file"
+          multiple
+          name="attachment"
+          class="hide"
+          id="attachment"
+          accept="image/png,image/jpeg,image/webp,image/gif"
+        />
         <input type="text" name="message" placeholder="Type a message" autocomplete="off" />
+        <button type="submit" id="send-button" class="send-button" aria-label="Send message">&#10148;</button>
+        <div class="chat-form-overlay">
+          <div id="attachment-preview" class="attachment-preview"></div>
+          <p id="chat-error" class="chat-error" role="alert"></p>
+        </div>
       </form>
     </div>
 
@@ -68,6 +80,119 @@
     const loggedinUserName = '<%= loggedInUser.username %>';
     let participant = null; // selected conversation participant object
     let current_conversation_id; // selected conversation id
+
+    // attachment handling
+    const attachmentInput = document.querySelector('#attachment');
+    const attachmentPreview = document.querySelector('#attachment-preview');
+    const chatError = document.querySelector('#chat-error');
+    const sendButton = document.querySelector('#send-button');
+
+    // keep in sync with middlerwares/inbox/attachmentUpload.js
+    const MAX_ATTACHMENT_SIZE = 10 * 1024 * 1024; // 10 MB
+    const MAX_ATTACHMENTS = 5;
+    const ALLOWED_ATTACHMENT_TYPES = [
+      'image/jpeg',
+      'image/jpg',
+      'image/png',
+      'image/webp',
+      'image/gif',
+    ];
+
+    function formatFileSize(bytes) {
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+      return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    }
+
+    function showChatError(message) {
+      chatError.textContent = message;
+      chatError.style.display = 'block';
+    }
+
+    function clearChatError() {
+      chatError.textContent = '';
+      chatError.style.display = 'none';
+    }
+
+    // replace the file selection (used when removing one file at a time)
+    function setAttachmentFiles(files) {
+      const transfer = new DataTransfer();
+      files.forEach((file) => transfer.items.add(file));
+      attachmentInput.files = transfer.files;
+    }
+
+    function removeAttachment(index) {
+      const files = Array.from(attachmentInput.files);
+      files.splice(index, 1);
+      if (files.length > 0) {
+        setAttachmentFiles(files);
+      } else {
+        attachmentInput.value = '';
+      }
+      renderAttachmentPreview();
+    }
+
+    function clearAttachments() {
+      attachmentInput.value = '';
+      renderAttachmentPreview();
+    }
+
+    function renderAttachmentPreview() {
+      const files = Array.from(attachmentInput.files);
+      attachmentPreview.innerHTML = '';
+
+      if (files.length === 0) {
+        attachmentPreview.classList.remove('is-visible');
+        return;
+      }
+
+      files.forEach((file, index) => {
+        const chip = document.createElement('div');
+        chip.className = 'attachment-chip';
+
+        if (file.type.startsWith('image/')) {
+          const thumb = document.createElement('img');
+          const objectUrl = URL.createObjectURL(file);
+          thumb.src = objectUrl;
+          thumb.onload = () => URL.revokeObjectURL(objectUrl);
+          chip.appendChild(thumb);
+        }
+
+        const name = document.createElement('span');
+        name.className = 'attachment-chip-name';
+        name.textContent = file.name;
+
+        const size = document.createElement('span');
+        size.className = 'attachment-chip-size';
+        size.textContent = formatFileSize(file.size);
+
+        const remove = document.createElement('button');
+        remove.type = 'button';
+        remove.className = 'attachment-chip-remove';
+        remove.textContent = '\u00d7';
+        remove.setAttribute('aria-label', 'Remove ' + file.name);
+        remove.addEventListener('click', () => removeAttachment(index));
+
+        chip.append(name, size, remove);
+        attachmentPreview.appendChild(chip);
+      });
+
+      if (files.length > 1) {
+        const clearAll = document.createElement('button');
+        clearAll.type = 'button';
+        clearAll.className = 'attachment-clear-all';
+        clearAll.textContent = 'Clear all';
+        clearAll.addEventListener('click', clearAttachments);
+        attachmentPreview.appendChild(clearAll);
+      }
+
+      attachmentPreview.classList.add('is-visible');
+    }
+
+    attachmentInput.addEventListener('change', () => {
+      clearChatError();
+      renderAttachmentPreview();
+    });
 
 
 
@@ -134,12 +259,51 @@
 
     form.onsubmit= async function(event){
       event.preventDefault();
-      
 
-      const sendMessageFailureToast = Toastify({
-          text: "Error sending message",
-          duration: 1000,
-        });
+      clearChatError();
+
+      const messageInput = form.querySelector('[name="message"]');
+      const files = Array.from(attachmentInput.files);
+
+      // nothing to send
+      if (!messageInput.value.trim() && files.length === 0) {
+        return;
+      }
+
+      // a conversation has to be selected first
+      if (!participant || !current_conversation_id) {
+        showChatError("Please select a conversation first");
+        return;
+      }
+
+      // validate the selected files before uploading
+      if (files.length > MAX_ATTACHMENTS) {
+        showChatError("Maximum " + MAX_ATTACHMENTS + " files can be attached at a time");
+        return;
+      }
+
+      const invalidType = files.find(
+        (file) => !ALLOWED_ATTACHMENT_TYPES.includes(file.type),
+      );
+      if (invalidType) {
+        showChatError(
+          invalidType.name +
+            ": only .jpg, .jpeg, .png, .webp or .gif images are allowed",
+        );
+        return;
+      }
+
+      const tooLarge = files.find((file) => file.size > MAX_ATTACHMENT_SIZE);
+      if (tooLarge) {
+        showChatError(
+          tooLarge.name +
+            " is " +
+            formatFileSize(tooLarge.size) +
+            " - maximum size per file is " +
+            formatFileSize(MAX_ATTACHMENT_SIZE),
+        );
+        return;
+      }
 
       // prepare the form data
       const formData = new FormData(form);
@@ -148,19 +312,41 @@
       formData.append('avatar', participant.avatar || '');
       formData.append('conversationId', current_conversation_id);
 
+      sendButton.disabled = true;
 
-      // send the request to server
-      let response = await fetch("/inbox/message", {
-        method: "POST",
-        body: formData,      
-      });
+      try {
+        // send the request to server
+        const response = await fetch("/inbox/message", {
+          method: "POST",
+          body: formData,
+        });
 
-      let result = await response.json();
+        const result = await response.json().catch(() => null);
 
-      if (!result.errors) {
-        form.reset(); // reset the form
-      } else {
-        sendMessageFailureToast.showToast();
+        if (!response.ok || !result || result.errors) {
+          // show the first server error, if there is one
+          let errorMessage = "Could not send the message. Please try again.";
+          if (result && result.errors) {
+            const firstError = Object.values(result.errors)[0];
+            errorMessage =
+              typeof firstError === "string"
+                ? firstError
+                : firstError.msg || errorMessage;
+          }
+          showChatError(errorMessage);
+          return;
+        }
+
+        // clear the form and reload the conversation so the new message shows up
+        form.reset();
+        renderAttachmentPreview();
+        await getMessages(current_conversation_id, participant.name);
+      } catch (err) {
+        showChatError(
+          "Could not send the message. Please check your connection and try again.",
+        );
+      } finally {
+        sendButton.disabled = false;
       }
     }
   </script>

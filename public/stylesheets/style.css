@@ -502,7 +502,7 @@ input[type="submit"]:active {
 
 #chat-form {
   display: grid;
-  grid: 51px / 32px 1fr;
+  grid: 51px / 32px 1fr 42px;
   align-content: center;
   align-items: center;
   grid-gap: 15px;
@@ -512,6 +512,7 @@ input[type="submit"]:active {
   padding-left: 10px;
   padding-right: 22px;
   visibility: hidden;
+  position: relative;
 }
 
 #chat-form input {
@@ -531,6 +532,174 @@ input[type="submit"]:active {
 #chat-form img:hover {
   cursor: pointer;
   transform: scale(1.05);
+}
+
+/* send button */
+#chat-form .send-button {
+  display: grid;
+  place-content: center center;
+  width: 40px;
+  height: 40px;
+  border: 2px solid var(--dark);
+  border-radius: 50%;
+  background: var(--green);
+  color: var(--dark);
+  font-size: 1.8rem;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    transform 0.15s ease,
+    opacity 0.15s ease;
+}
+
+#chat-form .send-button:hover:not(:disabled) {
+  transform: scale(1.08);
+}
+
+#chat-form .send-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* selected attachment preview + inline errors, floated above the form */
+.chat-form-overlay {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.attachment-preview {
+  display: none;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  pointer-events: auto;
+}
+
+.attachment-preview.is-visible {
+  display: flex;
+}
+
+.attachment-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 280px;
+  padding: 5px 6px;
+  background: var(--tertiary);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  color: var(--light);
+  font-size: 1.2rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+#chat-form .attachment-chip img {
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  object-fit: cover;
+}
+
+#chat-form .attachment-chip img:hover {
+  transform: none;
+}
+
+.attachment-chip-name {
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.attachment-chip-size {
+  color: #9aa0ad;
+  white-space: nowrap;
+}
+
+.attachment-chip-remove {
+  display: grid;
+  place-content: center center;
+  width: 20px;
+  height: 20px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--light);
+  font-family: inherit;
+  font-size: 1.6rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.attachment-chip-remove:hover {
+  background: var(--red);
+}
+
+.attachment-clear-all {
+  align-self: center;
+  padding: 5px 10px;
+  border: none;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--light);
+  font-family: inherit;
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+
+.attachment-clear-all:hover {
+  background: var(--red);
+}
+
+.chat-error {
+  display: none;
+  max-width: 100%;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: rgba(205, 92, 92, 0.95);
+  color: #fff;
+  font-size: 1.25rem;
+  word-break: break-word;
+  pointer-events: auto;
+}
+
+/* avatar preview inside the add user modal */
+.avatar-selected {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  padding: 6px 8px;
+  background: var(--tertiary);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  color: var(--light);
+  font-size: 1.2rem;
+}
+
+.avatar-selected.is-visible {
+  display: flex;
+}
+
+.avatar-selected img {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.avatar-selected span {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 ::-webkit-scrollbar {
