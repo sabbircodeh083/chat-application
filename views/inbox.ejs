@@ -71,8 +71,11 @@
     </div>
 
     <%- include('./partials/add-conversation-modal.ejs')%>
-  </body>
-  <script>
+
+       <!-- socket.io client served by our own server (version always matches) -->
+    <script src="/socket.io/socket.io.js"></script>
+
+    <script>
     const form = document.querySelector('#chat-form');
     const messageContainer = document.querySelector('#chat-message-list');
     const chatTitleContainer = document.querySelector('#conversation-partner');
@@ -80,6 +83,70 @@
     const loggedinUserName = '<%= loggedInUser.username %>';
     let participant = null; // selected conversation participant object
     let current_conversation_id; // selected conversation id
+
+
+    // socket initialization (same origin as the page)
+    const socket = io();
+
+    // handle new/live incoming message from socket
+      socket.on("new_message", data => {
+        // ignore our own messages: sendMessage() reloads the conversation
+        // from the server after a successful POST, so the message is already shown
+        if (String(data.message.sender.id) === loggedinUserId) {
+          return;
+        }
+
+        // only respond if current conversation is open in any client
+        if(data.message.conversation_id == current_conversation_id) {
+          // message class
+          const messageClass = data.message.sender.id === loggedinUserId ? 'you-message' : 'other-message';
+          
+          const senderAvatar = data.message.sender.avatar ? `<img src="./uploads/avatars/${data.message.sender.avatar}" alt="${data.message.sender.name}" />` : `<img src="./images/nophoto.png" alt="${data.message.sender.name}" />`;
+
+          // message attachments
+          let attachments = '<div class="attachments">';
+
+          if(data.message.attachment && data.message.attachment.length > 0) {
+            data.message.attachment.forEach(attachment => {
+              attachments += `<img src="./uploads/attachments/${attachment}" /> `;
+            });
+          }
+
+          attachments += '</div>';
+
+          let messageHTML;
+
+          // do not show avatar for loggedin user
+          if(data.message.sender.id == loggedinUserId) {
+            messageHTML = `<div class="message-row ${messageClass}"><div class="message-content">
+              <div class="message-text">${data.message.message}</div>
+              ${attachments}
+              <div class="message-time">${moment(data.message.date_time).fromNow()}</div>
+            </div></div>`;
+          } else {
+            messageHTML = `<div class="message-row ${messageClass}"><div class="message-content">
+              ${senderAvatar}
+              <div class="message-text">${data.message.message}</div>
+              ${attachments}
+              <div class="message-time">${moment(data.message.date_time).fromNow()}</div>
+            </div></div>`;
+          }
+
+          // append the incoming message to the message area as last item
+          const emptyChatbox = messageContainer.querySelector('#empty-chatbox');
+          if (emptyChatbox) {
+            emptyChatbox.remove();
+          }
+
+          const firstMessage = messageContainer.querySelector('.message-row');
+          if (firstMessage) {
+            firstMessage.insertAdjacentHTML('beforeBegin', messageHTML);
+          } else {
+            messageContainer.insertAdjacentHTML('beforeend', messageHTML);
+          }
+        }
+      });
+
 
     // attachment handling
     const attachmentInput = document.querySelector('#attachment');
@@ -350,4 +417,6 @@
       }
     }
   </script>
+  </body>
+  
 </html>
