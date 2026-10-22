@@ -1,9 +1,19 @@
 <%- include('./partials/header.ejs'); %>
     <div id="chat-container">
       <div id="search-container">
-        <input type="text" placeholder="Search" />
+        <input
+          type="text"
+          id="conversation-search"
+          placeholder="Search by name"
+          autocomplete="off"
+          aria-label="Search conversations by partner name"
+        />
       </div>
       <div id="conversation-list">
+        <div class="search-empty hide" id="search-empty" role="status">
+          No conversation found
+        </div>
+
         <% Cdata.forEach(conversation => { %>
           <!-- conversation creator is same to logged in user, so we need to show participant name and avatar -->
           <% if(conversation.creator.id == loggedInUser.userid) { %>
@@ -83,6 +93,44 @@
     const loggedinUserName = '<%= loggedInUser.username %>';
     let participant = null; // selected conversation participant object
     let current_conversation_id; // selected conversation id
+
+    // conversation search: filter the server-rendered conversation list (Cdata)
+    // by the partner name shown in each row.
+    const searchInput = document.querySelector('#conversation-search');
+    const conversationList = document.querySelector('#conversation-list');
+    const searchEmpty = document.querySelector('#search-empty');
+
+    function filterConversations() {
+      const query = searchInput.value.trim().toLowerCase();
+      const conversations = conversationList.querySelectorAll('.conversation');
+      let visibleCount = 0;
+
+      conversations.forEach((conversation) => {
+        const nameElement = conversation.querySelector('.title-text');
+        const partnerName = (nameElement?.textContent || '').trim().toLowerCase();
+        const matches = partnerName.includes(query);
+
+        conversation.classList.toggle('hide', !matches);
+        if (matches) {
+          visibleCount += 1;
+        }
+      });
+
+      // only show the message when there are conversations but none match
+      const hasConversations = conversations.length > 0;
+      searchEmpty.classList.toggle(
+        'hide',
+        !hasConversations || visibleCount > 0,
+      );
+    }
+
+    searchInput.addEventListener('input', filterConversations);
+    searchInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        searchInput.value = '';
+        filterConversations();
+      }
+    });
 
 
     // socket initialization (same origin as the page)
