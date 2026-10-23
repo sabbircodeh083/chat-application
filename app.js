@@ -75,8 +75,10 @@ async function start() {
 
     // NOTE: server.listen (not app.listen) so socket.io shares the same
     // HTTP server and can answer /socket.io requests.
-    server.listen(process.env.PORT, () => {
-      console.log(`app is listening on port ${process.env.PORT}`);
+    const PORT = process.env.PORT || 5000;
+
+    server.listen(PORT,  () => {
+      console.log(`app is listening on port ${PORT}`);
     });
   } catch (err) {
     console.error("database connection failed:", err.message);
