@@ -8,6 +8,7 @@ const {
   addConversation,
   getMessages,
   sendMessage,
+  deleteConversation,
 } = require("../controller/inboxController");
 const decorateHtmlRespose = require("../middlerwares/common/decorateHtmlResponse");
 const {
@@ -23,9 +24,16 @@ router.get("/", decorateHtmlRespose("Inbox"), authenticationHandler, getInbox);
 router.post("/search", authenticationHandler, searchUser);
 //create a new conversation for between participators
 router.post("/conversation", authenticationHandler, addConversation);
+//delete conversaton
+router.delete(
+  "/conversation/:conversationId",
+  authenticationHandler,
+  deleteConversation,
+);
 //get all messages
 router.get("/messages/:conversationId", authenticationHandler, getMessages);
 // send message
 router.post("/message", authenticationHandler, attachmentUpload, sendMessage);
+
 //exports the router
 module.exports = router;

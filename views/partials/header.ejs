@@ -7,16 +7,29 @@
     <meta name="author" content="Sumit Saha" />
     <meta name="owner" content="learnwithsumit.com" />
     <title><%= title %></title>
-    <link rel="shortcut icon" href="./images/favicon.png" />
-    <link rel="stylesheet" href="./stylesheets/toastify.css" />
-    <link rel="stylesheet" href="./stylesheets/style.css" />
-    <script src="./js/toastify.js"></script>
-    <script src="./js/moment.js"></script>
+    <!-- root-absolute paths: relative ones break (404) whenever the page URL
+         has a trailing slash or an extra path segment -->
+    <link rel="icon" type="image/png" href="/images/favicon.png" />
+    <link rel="apple-touch-icon" href="/images/favicon.png" />
+    <link rel="stylesheet" href="/stylesheets/toastify.css" />
+    <link rel="stylesheet" href="/stylesheets/style.css" />
+    <script src="/js/toastify.js"></script>
+    <script src="/js/moment.js"></script>
   </head>
   <body>
     <div class="menu">
       <% if(loggedInUser && loggedInUser.username){ %>
-        <div class="menu-item"><a href="/inbox">Inbox</a></div>
+      <!-- logged in user, pinned to the left of the menu bar -->
+      <div class="menu-user">
+        <% const avatarSrc = loggedInUser.avatar
+          ? `/uploads/avatars/${loggedInUser.avatar}`
+          : '/images/nophoto.png'; %>
+        <img src="<%= avatarSrc %>" alt="<%= loggedInUser.username %>" onerror="this.src='/images/nophoto.png'" />
+        <span><%= loggedInUser.username %></span>
+      </div>
+      <% } %>
+      <% if(loggedInUser && loggedInUser.username){ %>
+      <div class="menu-item"><a href="/inbox">Inbox</a></div>
       <div class="menu-item"><a href="/users">Users</a></div>
       <div class="menu-item"><a href="#" onclick="logoutRequest(event)" >Logout</a></div>
         <%}else{%>

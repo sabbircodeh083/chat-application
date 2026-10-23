@@ -52,7 +52,7 @@
       
       <div id="chat-title">
         <span id="conversation-partner"></span>
-        <img src="./images/trash.png" alt="Delete Conversation" />
+        <img src="./images/trash.png" alt="Delete Conversation" onclick="handleConversationDelete()" />
       </div>
 
       <!-- placeholder div if no messages are in messages area -->
@@ -99,6 +99,31 @@
     const searchInput = document.querySelector('#conversation-search');
     const conversationList = document.querySelector('#conversation-list');
     const searchEmpty = document.querySelector('#search-empty');
+
+    async function handleConversationDelete(){
+      const conversationDeleteFailureToast= Toastify({
+        text:"Error delete Conversation",
+        duration:1000,
+      }); 
+
+      const conversationDeleteSuccessToast= Toastify({
+        text:"Successfull Conversation deletion",
+        duration:1000,
+      }); 
+
+      const res=await fetch(`/inbox/conversation/${current_conversation_id}`,{
+        method:"DELETE",
+      });
+      const result = await res;
+      
+      if(!result.errors){
+        conversationDeleteSuccessToast.showToast();
+        location.reload();
+      }else{
+        conversationDeleteFailureToast.showToast();
+      }
+
+    }
 
     function filterConversations() {
       const query = searchInput.value.trim().toLowerCase();
@@ -311,65 +336,90 @@
 
 
 
+    // renders the placeholder shown when a conversation has no messages.
+    // it rebuilds the element every time, so it never depends on a node that
+    // a previous render may have removed from the DOM.
+    function renderEmptyState(text) {
+      const empty = document.createElement('div');
+      empty.className = 'nothing';
+      empty.id = 'empty-chatbox';
+      empty.textContent = text;
+      messageContainer.replaceChildren(empty);
+    }
+
+    function buildMessageHTML(message) {
+      const isMine = String(message.sender.id) === loggedinUserId;
+      const messageClass = isMine ? 'you-message' : 'other-message';
+      const senderAvatar = message.sender.avatar
+        ? `./uploads/avatars/${message.sender.avatar}`
+        : './images/nophoto.png';
+      const showAvatar = isMine
+        ? ''
+        : `<img src="${senderAvatar}" alt="${message.sender.name}" />`;
+
+      let attachments = "<div class='attachments'>";
+
+      if (message.attachment && message.attachment.length > 0) {
+        message.attachment.forEach((item) => {
+          attachments += `<img src="./uploads/attachments/${item}" /> `;
+        });
+      }
+      attachments += '</div>';
+
+      return `<div class="message-row ${messageClass}"><div class="message-content">
+              ${showAvatar}
+              <div class="message-text">${message.text}</div>
+              ${attachments}
+              <div class="message-time">${moment(message.date_time).fromNow()}</div>
+            </div></div>`;
+    }
+
+    // incremented on every conversation switch so a slow response for an older
+    // click cannot overwrite the conversation the user is looking at now
+    let messagesRequestId = 0;
+
     async function getMessages(conversationId, partnerName){
-      const massegesFailureToast= Toastify({
-        text:"Error Loading message",
-        duration:1000,
+      const messagesFailureToast = Toastify({
+        text: "Error Loading message",
+        duration: 1000,
       });
 
-      const res=await fetch(`/inbox/messages/${conversationId}`);
-      const result=await res.json();
-      
-     
+      const requestId = ++messagesRequestId;
 
-      if(!result.errors && result.data){
-        form.style.visibility="visible";
-        const {data}=result;
+      try {
+        const res = await fetch(`/inbox/messages/${conversationId}`);
+        const result = await res.json();
 
-        participant=data.participant;
-        current_conversation_id=conversationId;
+        // a newer conversation was selected while this request was in flight
+        if (requestId !== messagesRequestId) {
+          return;
+        }
 
-        if(data.messages){
-          
-        let allMessages="";
-          if(data.messages.length>0){
-            data.messages.forEach((message)=>{
-              let senderAvatar= message.sender.avatar?`./uploads/avatars/${message.sender.avatar}`:'./images/nophoto.png';
-              const messageClass=String(message.sender.id)===loggedinUserId?"you-message":"other-message";
-              const showAvatar=String(message.sender.id)===loggedinUserId?"":`<img src="${senderAvatar}" alt="${message.sender.name}" />`;
+        if (result.errors || !result.data) {
+          messagesFailureToast.showToast();
+          return;
+        }
 
-              let attachments= "<div class='attachments'>";
-              
-              if(message.attachment && message.attachment.length>0){
-                message.attachment.forEach(item=>{
-                  attachments += `<img src="./uploads/attachments/${item}" /> `;
-                });
-              }
-              attachments += "</div>";
+        const { data } = result;
 
-              //final message html 
-              let messageHTML=`<div class="message-row ${messageClass}"><div class="message-content">
-                      ${showAvatar}
-                      <div class="message-text">${message.text}</div>
-                      ${attachments}
-                      <div class="message-time">${moment(message.date_time).fromNow()}</div>
-                    </div></div>`;
+        participant = data.participant;
+        current_conversation_id = conversationId;
+        chatTitleContainer.textContent = partnerName;
+        form.style.visibility = "visible";
 
-              allMessages += messageHTML;
-              messageContainer.innerHTML = allMessages;
-            });
-          }else if(data.messages.length === 0) {
-            //todo
-      console.log(result.errors,result.data);
-            document.querySelector("#empty-chatbox").innerHTML=`Let's Start conversation with ${partnerName}` 
-          }
-          chatTitleContainer.textContent = partnerName;
+        const messages = Array.isArray(data.messages) ? data.messages : [];
+
+        if (messages.length === 0) {
+          renderEmptyState(`Say hi to ${partnerName}`);
+        } else {
+          // build once instead of rewriting innerHTML for every message
+          messageContainer.innerHTML = messages.map(buildMessageHTML).join('');
+        }
+      } catch (err) {
+        if (requestId === messagesRequestId) {
+          messagesFailureToast.showToast();
         }
       }
-      else {
-         
-          massegesFailureToast.showToast();
-        }
     }
 
     form.onsubmit= async function(event){

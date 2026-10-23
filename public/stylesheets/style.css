@@ -224,6 +224,9 @@ input[type="submit"]:active {
 
 /* menu related styles */
 .menu {
+  /* anchor for the logged in user block (absolute, so the nav items keep
+     exactly the same position as before) */
+  position: relative;
   display: grid;
   grid-template-columns: repeat(3, auto);
   justify-content: end;
@@ -255,6 +258,37 @@ input[type="submit"]:active {
   height: 20px;
   vertical-align: middle;
   border-radius: 100%;
+}
+
+/* logged in user block - out of the grid flow so it never shifts the links */
+.menu-user {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  /* never grow into the nav links, even with a very long name */
+  max-width: min(40%, calc(100% - 190px));
+  min-width: 0;
+}
+
+.menu-user img {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex: 0 0 auto;
+}
+
+.menu-user span {
+  color: var(--primary);
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 @media only screen and (max-width: 800px) {

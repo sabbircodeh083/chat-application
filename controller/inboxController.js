@@ -1,6 +1,8 @@
 //external Import
 
 const createError = require("http-errors");
+const { unlink } = require("fs");
+const path = require("path");
 
 //internal Import
 const User = require("../model/People");
@@ -138,6 +140,71 @@ async function getMessages(req, res, next) {
   }
 }
 
+//delete conversation
+
+async function deleteConversation(req, res, next) {
+  try {
+    const conversationId = req.params.conversationId;
+
+    //Find the conversation
+    const conversation = await Conversation.findById(conversationId);
+
+    if (!conversation) {
+      return res.status(404).json({
+        errors: {
+          common: "Conversation not found!",
+        },
+      });
+    }
+
+    // Find all messages belonging to the conversation
+    const allMessages = await messageModel.find({
+      conversation_id: conversationId,
+    });
+
+    //Delete attachments associated with each message
+    for (const message of allMessages) {
+      if (message.attachment?.length > 0) {
+        for (const item of message.attachment) {
+          const filePath = path.join(
+            __dirname,
+            "../public/uploads/attachments",
+            item,
+          );
+
+          unlink(filePath, (err) => {
+            if (err) console.log(err);
+          });
+        }
+      }
+    }
+
+    // Delete all messages belonging to the conversation
+    await messageModel.deleteMany({
+      conversation_id: conversationId,
+    });
+
+    //Delete the conversation itself
+    const result = await Conversation.deleteOne({
+      _id: conversationId,
+    });
+
+    if (result.acknowledged && result.deletedCount === 1) {
+      return res.status(200).json({
+        message: "Conversation deleted successfully!",
+      });
+    }
+
+    return res.status(500).json({
+      errors: {
+        common: "Conversation deletion failed!",
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
 //send new message
 async function sendMessage(req, res, next) {
   if (req.body.message || (req.files && req.files.length > 0)) {
@@ -215,4 +282,5 @@ module.exports = {
   addConversation,
   getMessages,
   sendMessage,
+  deleteConversation,
 };
