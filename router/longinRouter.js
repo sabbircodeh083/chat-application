@@ -12,8 +12,23 @@ const {
   allreadyAuthenticatedHandler,
 } = require("../middlerwares/common/authenticationHandler");
 const { getInbox } = require("../controller/inboxController");
+const avatarUpload = require("../middlerwares/users/avatarupload");
+const {
+  addUserValidators,
+  addUserValidationHandler,
+} = require("../middlerwares/users/userValidators");
+const { registerUser } = require("../controller/usersController");
 
 const router = express.Router();
+
+//public registration used by the login page modal
+router.post(
+  "/register",
+  avatarUpload,
+  addUserValidators,
+  addUserValidationHandler,
+  registerUser,
+);
 
 router.get(
   "/",

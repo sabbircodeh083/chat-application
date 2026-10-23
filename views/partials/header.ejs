@@ -30,7 +30,9 @@
       <% } %>
       <% if(loggedInUser && loggedInUser.username){ %>
       <div class="menu-item"><a href="/inbox">Inbox</a></div>
-      <div class="menu-item"><a href="/users">Users</a></div>
+      <%if(loggedInUser.role.toLowerCase()==="admin"){%>
+        <div class="menu-item"><a href="/users">Users</a></div>
+      <%}%>
       <div class="menu-item"><a href="#" onclick="logoutRequest(event)" >Logout</a></div>
         <%}else{%>
       <div class="menu-item"><a href="/inbox">Inbox</a></div>

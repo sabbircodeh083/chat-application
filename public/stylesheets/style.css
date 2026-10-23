@@ -217,8 +217,8 @@ input[type="submit"]:active {
 /* modal related responsive styles */
 
 @media only screen and (max-width: 600px) {
-  #modal {
-    width: 390px;
+  .modal {
+    width: calc(100% - 24px);
   }
 }
 
@@ -833,6 +833,22 @@ input[type="submit"]:active {
   flex-direction: column;
   gap: 10px;
   margin: 0 auto;
+}
+
+.register-prompt {
+  text-align: center;
+  color: var(--light);
+  font-size: 1.3rem;
+}
+
+.register-prompt .register-link {
+  color: var(--blue);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.register-prompt .register-link:hover {
+  text-decoration: underline;
 }
 
 /* login related responsive styles */

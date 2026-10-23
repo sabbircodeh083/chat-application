@@ -1,13 +1,43 @@
-<div class="modal-wrapper" id="add-user-modal">
+<%
+  // The partial is shared by the login page (register) and the users page
+  // (admin creates a user). Both callers pass these values explicitly.
+
+  
+  const modalHeading = typeof modalTitle !== "undefined"
+    ? modalTitle
+    : "Create New User";
+  const modalAction = typeof formAction !== "undefined"
+    ? formAction
+    : "/users";
+  const modalSubmitLabel = typeof submitLabel !== "undefined"
+    ? submitLabel
+    : "Submit";
+  const modalSuccessText = typeof successText !== "undefined"
+    ? successText
+    : "User was added successfully! Reloading the list...";
+%>
+<div
+  class="modal-wrapper"
+  id="add-user-modal"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="add-user-modal-title"
+>
   <div class="modal">
-    <a href="#" onclick="closeModal()" class="modal-close">+</a>
+    <a
+      href="#"
+      onclick="closeUserModal(event)"
+      class="modal-close"
+      aria-label="Close dialog"
+      >+</a
+    >
     <div class="modal-title">
-      <h2>Create New User</h2>
+      <h2 id="add-user-modal-title"><%= modalHeading %></h2>
     </div>
     <div class="modal-body">
       <form
         method="post"
-        action="/users"
+        action="<%= modalAction %>"
         enctype="multipart/form-data"
         id="add-user-form"
       >
@@ -37,7 +67,7 @@
           </button>
         </div>
         <p class="error avatar-error"></p>
-        <input type="submit" value="Submit" />
+        <input type="submit" value="<%= modalSubmitLabel %>" />
         <p class="error common-error"></p>
       </form>
     </div>
@@ -46,16 +76,20 @@
 <script>
   //create success toast
   let successToast = Toastify({
-    text: "User was added successfully! Reloading the list...",
+    text: <%- JSON.stringify(modalSuccessText)%>,
     duration: 1000,
   });
 
-  const modal = document.querySelector("#add-user-modal");
-  function closeModal() {
-    modal.style.display = "none";
+  const userModal = document.querySelector("#add-user-modal");
+
+  function closeUserModal(event) {
+    if (event) event.preventDefault();
+    userModal.style.display = "none";
   }
-  function openModal() {
-    modal.style.display = "block";
+
+  function openUserModal(event) {
+    if (event) event.preventDefault();
+    userModal.style.display = "block";
   }
 
   const form = document.querySelector("#add-user-form");
@@ -131,19 +165,19 @@
     const formData = new FormData(form);
 
     //set all error para hiddin
-    const allErrorFields = document.querySelectorAll("p.error");
+    const allErrorFields = form.querySelectorAll("p.error");
     allErrorFields.forEach((item) => {
       item.style.display = "none";
       item.textContent = "";
     });
 
     //remove error class form all input field
-    const inputErrors = document.querySelectorAll("input.error");
+    const inputErrors = form.querySelectorAll("input.error");
     inputErrors.forEach((item) => {
       item.classList.remove("error");
     });
 
-    const commonError = document.querySelector(".common-error");
+    const commonError = form.querySelector(".common-error");
 
     // validate the selected avatar before uploading
     const avatarFile = avatarInput.files[0];
@@ -168,7 +202,7 @@
 
     try {
       //send the request to the server
-      const response = await fetch("./users", {
+      const response = await fetch(form.action, {
         method: "POST",
         body: formData,
       });
@@ -191,7 +225,7 @@
           if (input) input.classList.add("error");
 
           //show the error message for each input field
-          const errorPlaceholder = document.querySelector(
+          const errorPlaceholder = form.querySelector(
             `.${fieldName}-error`,
           );
           if (errorPlaceholder) {
@@ -203,7 +237,7 @@
           }
         });
       } else {
-        closeModal();
+        closeUserModal();
         form.reset();
         renderAvatarPreview();
         successToast.showToast();

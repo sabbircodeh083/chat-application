@@ -5,7 +5,14 @@
       </div>
 
       <div class="new-message-container new-user">
-        <a href="#" onclick="openModal()">+</a>
+        <a
+          href="#"
+          onclick="openUserModal(event)"
+          aria-haspopup="dialog"
+          aria-controls="add-user-modal"
+          aria-label="Create new user"
+          >+</a
+        >
       </div>
 
       <div id="users-table">
@@ -38,7 +45,12 @@
         </table>
       </div>
     </div>
-    <%- include('./partials/add-user-modal.ejs') %>
+    <%- include('./partials/add-user-modal.ejs', {
+      modalTitle: 'Create New User',
+      submitLabel: 'Submit',
+      formAction: '/users',
+      successText: 'User was added successfully! Reloading the list...'
+    }) %>
     <script>
        const deleteToast=Toastify({
         text:"User is deleted Successfully",

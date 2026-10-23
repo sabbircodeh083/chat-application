@@ -26,8 +26,26 @@
           <p class="error show"><%=errors.common.msg%></p>
           <% } %>
           <input type="submit" value="Login" />
+          <p class="register-prompt">
+            You don't have account?
+            <a
+              href="#"
+              class="register-link"
+              onclick="openUserModal(event)"
+              aria-haspopup="dialog"
+              aria-controls="add-user-modal"
+              >register</a
+            >
+          </p>
         </form>
       </div>
     </div>
+
+    <%- include('./partials/add-user-modal.ejs', {
+      modalTitle: 'Register',
+      submitLabel: 'Register',
+      formAction: '/register',
+      successText: 'Account created successfully! Please login.'
+    }) %>
   </body>
 </html>

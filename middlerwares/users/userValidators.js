@@ -15,6 +15,9 @@ const addUserValidators = [
     .isEmail()
     .withMessage("Invalid Email address")
     .trim()
+    //the schema stores emails lowercase, so normalize here too or the
+    //duplicate check below can miss an existing account
+    .customSanitizer((value) => value.toLowerCase())
     .custom(async (value) => {
       try {
         const user = await User.findOne({ email: value });

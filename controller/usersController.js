@@ -22,37 +22,60 @@ async function getUsers(req, res, next) {
   }
 }
 
-async function addUser(req, res, next) {
-  let userObj = {};
-  const hashedPassword = await bcrypt.hash(req.body.password, 10);
-  if (req.files && req.files.length > 0) {
-    userObj = {
-      ...req.body,
-      password: hashedPassword,
-      avatar: req.files[0].filename,
-    };
-  } else {
-    userObj = {
-      ...req.body,
+//build the user from an allow-list so request bodies can never inject fields
+//such as role or avatar; forcedRole is used by the public registration route
+async function createUser(req, res, forcedRole) {
+  try {
+    const hashedPassword = await bcrypt.hash(req.body.password, 10);
+
+    const userObj = {
+      name: req.body.name,
+      email: req.body.email,
+      mobile: req.body.mobile,
       password: hashedPassword,
     };
-  }
-  addUserCURD(userObj, (isErorr, err) => {
-    if (isErorr) {
-      res.status(500).json({
-        errors: {
-          common: {
-            msg: "Unknown error",
-          },
-        },
-      });
-    } else {
-      res.status(200).json({
-        message: "User was added successfully!",
-        errors: {},
-      });
+
+    if (forcedRole) {
+      userObj.role = forcedRole;
     }
-  });
+
+    if (req.files && req.files.length > 0) {
+      userObj.avatar = req.files[0].filename;
+    }
+
+    addUserCURD(userObj, (isErorr, err) => {
+      if (isErorr) {
+        res.status(500).json({
+          errors: {
+            common: {
+              msg: "Unknown error",
+            },
+          },
+        });
+      } else {
+        res.status(200).json({
+          message: "User was added successfully!",
+          errors: {},
+        });
+      }
+    });
+  } catch (err) {
+    res.status(500).json({
+      errors: {
+        common: {
+          msg: "Unknown error",
+        },
+      },
+    });
+  }
+}
+
+function addUser(req, res, next) {
+  return createUser(req, res, "admin");
+}
+
+function registerUser(req, res, next) {
+  return createUser(req, res, "user");
 }
 
 function removeUser(req, res, next) {
@@ -77,5 +100,6 @@ function removeUser(req, res, next) {
 module.exports = {
   getUsers,
   addUser,
+  registerUser,
   removeUser,
 };
