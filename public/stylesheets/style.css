@@ -1769,15 +1769,14 @@ p.error {
 
 @media only screen and (max-width: 820px) {
   #login-container {
-    position: relative;
     grid-template-columns: 1fr;
-    grid-template-rows: auto 1fr;
+    grid-template-rows: auto auto;
     grid-template-areas:
       "branding"
       "login-form";
     width: min(560px, calc(100% - 32px));
     height: auto;
-    min-height: calc(100dvh - 120px);
+    min-height: 0;
     max-height: none;
     margin: 14px auto 24px;
     background:
@@ -1789,29 +1788,8 @@ p.error {
       var(--surface);
   }
 
-  #login-container::after {
-    content: "";
-    position: absolute;
-    bottom: -18px;
-    left: 50%;
-    z-index: 0;
-    width: min(340px, 74%);
-    height: 240px;
-    background: url("../images/illustration.png") center bottom / contain
-      no-repeat;
-    opacity: 0.16;
-    pointer-events: none;
-    transform: translateX(-50%);
-  }
-
   #left-column {
     display: none;
-  }
-
-  #branding,
-  #login-form {
-    position: relative;
-    z-index: 1;
   }
 
   #branding {
