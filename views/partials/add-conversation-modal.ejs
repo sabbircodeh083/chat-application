@@ -1,17 +1,26 @@
 <div class="modal-wrapper" id="add-conversation-modal">
   <div class="modal">
-    <a onclick="closeModal()" class="modal-close">+</a>
+    <button
+      type="button"
+      onclick="closeModal()"
+      class="modal-close"
+      aria-label="Close dialog"
+    >
+      &times;
+    </button>
     <div class="modal-title">
-      <h2>Create New Conversation</h2>
+      <h2>Start a conversation</h2>
+      <p>Search for a person by name, email, or mobile number.</p>
     </div>
     <div class="modal-body">
       <form id="add-conversation-form">
         <input
           type="text"
-          placeholder="search user by name or email or mobile"
+          placeholder="Search people…"
           name="user"
           id="user"
           autocomplete="off"
+          aria-label="Search people"
         />
         <p class="error"></p>
         <div class="search_users"></div>
@@ -26,76 +35,154 @@
   const modal = document.querySelector("#add-conversation-modal");
   const input = document.querySelector("input#user");
   const users_placeholder = document.querySelector(".search_users");
-  const doneTypingInterval = 500; //duration for searching
+  const doneTypingInterval = 400; //duration for searching
   let typingTimer; //setTimeout function
+  let searchRequestId = 0;
   const error_placeholder = document.querySelector("p.error");
 
   //open the modal
   function openModal() {
-    modal.style.display = "block";
+    modal.style.display = "flex";
+    document.body.style.overflow = "hidden";
+    setTimeout(() => input.focus(), 50);
   }
+
   //close modal
   function closeModal() {
     modal.style.display = "none";
+    document.body.style.overflow = "";
     input.value = "";
     users_placeholder.style.display = "none";
+    users_placeholder.innerHTML = "";
+    error_placeholder.style.display = "none";
   }
+
+  // searching is handled by the keyup listener; never submit/reload the page
+  document
+    .querySelector("#add-conversation-form")
+    .addEventListener("submit", (event) => event.preventDefault());
+
+  // close when clicking the dimmed backdrop or pressing Escape
+  modal.addEventListener("click", (event) => {
+    if (event.target === modal) {
+      closeModal();
+    }
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && modal.style.display === "flex") {
+      closeModal();
+    }
+  });
 
   //serch for user according to countdown
   input.addEventListener("keyup", () => {
     clearTimeout(typingTimer);
     users_placeholder.style.display = "none";
-    if (input.value) {
+    if (input.value.trim()) {
       typingTimer = setTimeout(searchUsers, doneTypingInterval);
+    } else {
+      // invalidate any search that is still in flight
+      searchRequestId += 1;
+      error_placeholder.style.display = "none";
     }
   });
 
   async function searchUsers() {
+    const query = input.value.trim();
+    if (!query) {
+      return;
+    }
+
     error_placeholder.style.display = "none";
-    const response = await fetch("/inbox/search", {
-      method: "POST",
-      body: JSON.stringify({ user: input.value }),
-      headers: {
-        "content-type": "application/json; charset=UTF-8",
-      },
-    });
+    const requestId = ++searchRequestId;
 
-    const result = await response.json();
-
-    if (!result.errors) {
-      let generateHTML = "<ul>";
-      result.forEach((user) => {
-        const avatar = user.avatar
-          ? `./uploads/avatars/${user.avatar}`
-          : "./images/nophoto.png";
-
-        generateHTML += `<li onclick="createConversation('${user._id}','${user.name}','${user.avatar || ""}')">
-                <div class="user" >
-                  <div class="avatar" > <img src="${avatar}" alt="some" /></div>
-                  <div class="username" >${user.name}</div>
-                </div>
-              </li>`;
+    try {
+      const response = await fetch("/inbox/search", {
+        method: "POST",
+        body: JSON.stringify({ user: query }),
+        headers: {
+          "content-type": "application/json; charset=UTF-8",
+        },
       });
-      generateHTML += "</ul>";
 
-      users_placeholder.innerHTML = generateHTML;
-      users_placeholder.style.display = "block";
-    } else {
-      error_placeholder.innerHTML = result.errors.common.msg;
-      error_placeholder.style.display = "block";
+      const result = await response.json();
+
+      // a newer keystroke started another search
+      if (requestId !== searchRequestId) {
+        return;
+      }
+
+      if (!result.errors) {
+        const list = document.createElement("ul");
+
+        result.forEach((user) => {
+          const item = document.createElement("li");
+          item.tabIndex = 0;
+          item.setAttribute("role", "button");
+          item.setAttribute("aria-label", `Start a chat with ${user.name}`);
+
+          const userRow = document.createElement("div");
+          userRow.className = "user";
+
+          const avatar = document.createElement("div");
+          avatar.className = "avatar";
+          const avatarImage = document.createElement("img");
+          avatarImage.src = user.avatar
+            ? `/uploads/avatars/${user.avatar}`
+            : "/images/nophoto.png";
+          avatarImage.alt = "";
+          avatarImage.onerror = () => {
+            avatarImage.src = "/images/nophoto.png";
+          };
+          avatar.appendChild(avatarImage);
+
+          const username = document.createElement("div");
+          username.className = "username";
+          username.textContent = user.name;
+
+          userRow.append(avatar, username);
+          item.appendChild(userRow);
+
+          const startConversation = () =>
+            createConversation(user._id, user.name, user.avatar || "");
+
+          item.addEventListener("click", startConversation);
+          item.addEventListener("keydown", (event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              startConversation();
+            }
+          });
+
+          list.appendChild(item);
+        });
+
+        users_placeholder.replaceChildren(list);
+        users_placeholder.style.display = "block";
+      } else {
+        error_placeholder.textContent = result.errors.common.msg;
+        error_placeholder.style.display = "block";
+      }
+    } catch (err) {
+      if (requestId === searchRequestId) {
+        error_placeholder.textContent =
+          "Could not search right now. Please try again.";
+        error_placeholder.style.display = "block";
+      }
     }
   }
 
   // conversation created failure toast
   const conversationFailureToast = Toastify({
-    text: "Error creating a conversation!",
-    duration: 1000,
+    text: "Could not create the conversation",
+    duration: 1800,
   });
+
   //conversation created success toast
-  // conversation created failure toast
   const conversationSuccessToast = Toastify({
-    text: "Conversation has Created!",
-    duration: 1000,
+    text: "Conversation created",
+    duration: 1400,
   });
 
   async function createConversation(
@@ -117,19 +204,20 @@
         },
       });
 
-      const result = response.json();
-      if (!result.errors) {
-        //clear user placehoalder and search input field
-        ((users_placeholder.style.display = "none"), (input.value = name));
-        //show success toast
-        conversationSuccessToast.showToast();
-        //reload the page
-        setTimeout(() => {
-          location.reload();
-        }, 1000);
-      } else {
-        throw new Error(result.errors.common.msg);
+      const result = await response.json();
+
+      if (!response.ok || result.errors) {
+        throw new Error(
+          result.errors?.common?.msg || "Could not create the conversation",
+        );
       }
+
+      closeModal();
+      conversationSuccessToast.showToast();
+
+      setTimeout(() => {
+        location.reload();
+      }, 700);
     } catch (err) {
       conversationFailureToast.showToast();
     }

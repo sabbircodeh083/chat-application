@@ -1,51 +1,97 @@
 <%- include('./partials/header.ejs'); %>
 
     <div id="login-container">
-      <div id="left-column"></div>
+      <section id="left-column" aria-hidden="true"></section>
+
       <div id="branding">
-        <img src="./images/logo.png" />
-        <h1>Login - Chat Application</h1>
+        <img src="/images/logo.png" alt="Chattrix logo" />
+        <div>
+          <h1>Welcome back</h1>
+          <p>Sign in to continue to your conversations.</p>
+        </div>
       </div>
-      <div id="login-form">
+
+      <section id="login-form" aria-label="Login form">
         <form method="post" action="/">
+          <label class="field-label" for="username">Email or mobile number</label>
           <input
+            id="username"
             type="text"
             name="username"
-            placeholder="enter mobile or email"
+            placeholder="you@example.com or +8801XXXXXXXXX"
             value="<%= data.username %>"
+            autocomplete="username"
+            autofocus
+            required
           />
           <% if(errors.username){ %>
-          <p class="error show"><%=errors.username.msg%></p>
+          <p class="error show"><%= errors.username.msg %></p>
           <% } %>
-          <input type="password" name="password" placeholder="enter password" />
+
+          <label class="field-label" for="password">Password</label>
+          <div class="password-wrap">
+            <input
+              id="password"
+              type="password"
+              name="password"
+              placeholder="Enter your password"
+              autocomplete="current-password"
+              required
+            />
+            <button
+              type="button"
+              class="password-toggle"
+              id="password-toggle"
+              aria-label="Show password"
+              aria-controls="password"
+            >
+              Show
+            </button>
+          </div>
           <% if(errors.password){ %>
-          <p class="error show"><%=errors.password.msg%></p>
+          <p class="error show"><%= errors.password.msg %></p>
           <% } %>
 
           <% if(errors.common){ %>
-          <p class="error show"><%=errors.common.msg%></p>
+          <p class="error show"><%= errors.common.msg %></p>
           <% } %>
-          <input type="submit" value="Login" />
+
+          <input type="submit" value="Sign in" />
           <p class="register-prompt">
-            You don't have account?
+            New to Chattrix?
             <a
               href="#"
               class="register-link"
               onclick="openUserModal(event)"
               aria-haspopup="dialog"
               aria-controls="add-user-modal"
-              >register</a
+              >Create an account</a
             >
           </p>
         </form>
-      </div>
+      </section>
     </div>
 
     <%- include('./partials/add-user-modal.ejs', {
-      modalTitle: 'Register',
-      submitLabel: 'Register',
+      modalTitle: 'Create your account',
+      submitLabel: 'Create account',
       formAction: '/register',
-      successText: 'Account created successfully! Please login.'
+      successText: 'Account created successfully! Please sign in.'
     }) %>
+
+    <script>
+      const passwordInput = document.querySelector("#password");
+      const passwordToggle = document.querySelector("#password-toggle");
+
+      passwordToggle.addEventListener("click", () => {
+        const show = passwordInput.type === "password";
+        passwordInput.type = show ? "text" : "password";
+        passwordToggle.textContent = show ? "Hide" : "Show";
+        passwordToggle.setAttribute(
+          "aria-label",
+          show ? "Hide password" : "Show password",
+        );
+      });
+    </script>
   </body>
 </html>

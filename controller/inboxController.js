@@ -17,9 +17,46 @@ async function getInbox(req, res, next) {
         { "creator.id": req.user.userid },
         { "participant.id": req.user.userid },
       ],
-    });
+    })
+      .sort({ last_update: -1 })
+      .lean();
 
-    res.locals.Cdata = conversations;
+    // attach the latest message to each conversation so the sidebar can show
+    // a preview without a query per row
+    const conversationIds = conversations.map((conversation) => conversation._id);
+    let lastMessageByConversation = new Map();
+
+    if (conversationIds.length > 0) {
+      const lastMessages = await messageModel.aggregate([
+        { $match: { conversation_id: { $in: conversationIds } } },
+        { $sort: { date_time: -1 } },
+        {
+          $group: {
+            _id: "$conversation_id",
+            text: { $first: "$text" },
+            attachment: { $first: "$attachment" },
+            sender: { $first: "$sender" },
+            date_time: { $first: "$date_time" },
+          },
+        },
+      ]);
+
+      lastMessageByConversation = new Map(
+        lastMessages.map((message) => [String(message._id), message]),
+      );
+    }
+
+    res.locals.Cdata = conversations
+      .map((conversation) => ({
+        ...conversation,
+        last_message: lastMessageByConversation.get(String(conversation._id)) || null,
+      }))
+      .sort((a, b) => {
+        const aDate = a.last_message?.date_time || a.last_update;
+        const bDate = b.last_message?.date_time || b.last_update;
+        return new Date(bDate) - new Date(aDate);
+      });
+
     res.render("inbox");
   } catch (err) {
     next(err);
@@ -114,14 +151,33 @@ async function addConversation(req, res, next) {
 //get all messages
 async function getMessages(req, res, next) {
   try {
+    const conversation = await Conversation.findById(
+      req.params.conversationId,
+    ).lean();
+
+    if (!conversation) {
+      return res.status(404).json({
+        errors: {
+          common: {
+            msg: "Conversation not found",
+          },
+        },
+      });
+    }
+
     const messages = await messageModel
       .find({
         conversation_id: req.params.conversationId,
       })
-      .sort("-createdAt");
-    const { participant } = await Conversation.findById(
-      req.params.conversationId,
-    );
+      .sort("-date_time");
+
+    // the logged-in user may be either the creator or the participant; always
+    // return the *other* person so the chat header shows the right avatar
+    const isCreator =
+      String(conversation.creator.id) === String(req.user.userid);
+    const participant = isCreator
+      ? conversation.participant
+      : conversation.creator;
 
     res.status(200).json({
       data: {
@@ -133,7 +189,7 @@ async function getMessages(req, res, next) {
     res.status(500).json({
       errors: {
         common: {
-          msg: "Unknows error occured!",
+          msg: "Unknown error occurred!",
         },
       },
     });
@@ -237,6 +293,18 @@ async function sendMessage(req, res, next) {
       });
 
       const result = await newMessage.save();
+
+      // keep the conversation list ordered by the latest activity
+      try {
+        await Conversation.findByIdAndUpdate(req.body.conversationId, {
+          last_update: result.date_time,
+        });
+      } catch (updateErr) {
+        console.error(
+          "Could not update conversation timestamp:",
+          updateErr.message,
+        );
+      }
 
       // emit socket event
 

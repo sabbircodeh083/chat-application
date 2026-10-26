@@ -4,9 +4,10 @@
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#070b14" />
     <meta name="author" content="Sumit Saha" />
     <meta name="owner" content="learnwithsumit.com" />
-    <title><%= title %></title>
+    <title><%= typeof title !== "undefined" ? title : "Chattrix" %></title>
     <!-- root-absolute paths: relative ones break (404) whenever the page URL
          has a trailing slash or an extra path segment -->
     <link rel="icon" type="image/png" href="/images/favicon.png" />
@@ -17,50 +18,91 @@
     <script src="/js/moment.js"></script>
   </head>
   <body>
-    <div class="menu">
-      <% if(loggedInUser && loggedInUser.username){ %>
-      <!-- logged in user, pinned to the left of the menu bar -->
-      <div class="menu-user">
-        <% const avatarSrc = loggedInUser.avatar
-          ? `/uploads/avatars/${loggedInUser.avatar}`
-          : '/images/nophoto.png'; %>
-        <img src="<%= avatarSrc %>" alt="<%= loggedInUser.username %>" onerror="this.src='/images/nophoto.png'" />
-        <span><%= loggedInUser.username %></span>
-      </div>
-      <% } %>
-      <% if(loggedInUser && loggedInUser.username){ %>
-      <div class="menu-item"><a href="/inbox">Inbox</a></div>
-      <%if(loggedInUser.role.toLowerCase()==="admin"){%>
-        <div class="menu-item"><a href="/users">Users</a></div>
-      <%}%>
-      <div class="menu-item"><a href="#" onclick="logoutRequest(event)" >Logout</a></div>
-        <%}else{%>
-      <div class="menu-item"><a href="/inbox">Inbox</a></div>
-      <div class="menu-item"><a href="/users">Users</a></div>
-      <div class="menu-item"><a href="/">Login</a></div>
-      <%}%>
-    </div>
+    <%
+      // error pages can be rendered without the page locals; keep the header
+      // safe to include from every view.
+      const currentUser =
+        typeof loggedInUser !== "undefined" && loggedInUser
+          ? loggedInUser
+          : {};
+      const isLoggedIn = Boolean(currentUser.username);
+      const isAdmin =
+        typeof currentUser.role === "string" &&
+        currentUser.role.toLowerCase() === "admin";
+      const pageTitle =
+        typeof title === "undefined" ? "" : String(title).toLowerCase();
+    %>
+    <header class="menu">
+      <a class="brand" href="<%= isLoggedIn ? '/inbox' : '/' %>" aria-label="Chattrix home">
+        <img src="/images/logo.png" alt="" />
+        <span>Chattrix</span>
+      </a>
 
-    <Script> 
-      const logoutToast=Toastify({
-          text:"Logout successfull",
-          duration:1000
-        });
-      async function logoutRequest(event){
+      <% if (isLoggedIn) { %>
+        <div class="menu-user">
+          <img
+            src="<%= currentUser.avatar ? `/uploads/avatars/${currentUser.avatar}` : '/images/nophoto.png' %>"
+            alt="<%= currentUser.username %>"
+            onerror="this.src='/images/nophoto.png'"
+          />
+          <div class="user-meta">
+            <span class="user-name"><%= currentUser.username %></span>
+            <span class="user-role"><%= isAdmin ? "Admin" : "Member" %></span>
+          </div>
+        </div>
+        <nav class="menu-links" aria-label="Main navigation">
+          <a
+            class="menu-item nav-link <%= pageTitle.includes('inbox') ? 'is-active' : '' %>"
+            href="/inbox"
+            <% if (pageTitle.includes('inbox')) { %>aria-current="page"<% } %>
+            >Inbox</a
+          >
+          <% if (isAdmin) { %>
+            <a
+              class="menu-item nav-link <%= pageTitle.includes('users') ? 'is-active' : '' %>"
+              href="/users"
+              <% if (pageTitle.includes('users')) { %>aria-current="page"<% } %>
+              >Users</a
+            >
+          <% } %>
+          <a
+            class="menu-item nav-link logout-link"
+            href="#"
+            onclick="logoutRequest(event)"
+            >Logout</a
+          >
+        </nav>
+      <% } else { %>
+        <nav class="menu-links" aria-label="Main navigation">
+          <a
+            class="menu-item nav-link <%= pageTitle.includes('login') ? 'is-active' : '' %>"
+            href="/"
+            <% if (pageTitle.includes('login')) { %>aria-current="page"<% } %>
+            >Login</a
+          >
+        </nav>
+      <% } %>
+    </header>
+
+    <script>
+      const logoutToast = Toastify({
+        text: "Logged out successfully",
+        duration: 1200,
+      });
+
+      async function logoutRequest(event) {
         event.preventDefault();
-        //create toast
-        
-        //send request
-        await fetch("/",{
-          method:"DELETE"
-        });
-        //show toast 
-        logoutToast.showToast();
+
+        try {
+          await fetch("/", { method: "DELETE" });
+          logoutToast.showToast();
+        } catch (err) {
+          // still send the user back to the login page
+        }
 
         setTimeout(() => {
-          window.location.replace("/")
-        }, 1000);
+          window.location.replace("/");
+        }, 700);
       }
-    </Script>
+    </script>
     <!-- prettier-ignore -->
-  

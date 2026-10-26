@@ -2,7 +2,6 @@
   // The partial is shared by the login page (register) and the users page
   // (admin creates a user). Both callers pass these values explicitly.
 
-  
   const modalHeading = typeof modalTitle !== "undefined"
     ? modalTitle
     : "Create New User";
@@ -24,15 +23,19 @@
   aria-labelledby="add-user-modal-title"
 >
   <div class="modal">
-    <a
-      href="#"
+    <button
+      type="button"
       onclick="closeUserModal(event)"
       class="modal-close"
       aria-label="Close dialog"
-      >+</a
     >
+      &times;
+    </button>
     <div class="modal-title">
       <h2 id="add-user-modal-title"><%= modalHeading %></h2>
+      <p>
+        Fill in the details below. Your password is hashed before it is stored.
+      </p>
     </div>
     <div class="modal-body">
       <form
@@ -41,19 +44,62 @@
         enctype="multipart/form-data"
         id="add-user-form"
       >
-        <input type="text" placeholder="Name" name="name" />
-        <p class="error name-error"></p>
-        <input type="text" placeholder="Email" name="email" />
-        <p class="error email-error"></p>
-        <input type="text" placeholder="Mobile (with country code) +8801700000000" name="mobile" />
-        <p class="error mobile-error"></p>
-        <input type="password" placeholder="password (at least 8 char,1 upper,1 special)" name="password" />
-        <p class="error password-error"></p>
+        <label class="field-label" for="user-name">Name</label>
         <input
-          type="file"
-          name="avatar"
-          accept="image/png,image/jpeg,image/webp,image/gif"
+          id="user-name"
+          type="text"
+          placeholder="Full name"
+          name="name"
+          autocomplete="name"
         />
+        <p class="error name-error"></p>
+
+        <label class="field-label" for="user-email">Email</label>
+        <input
+          id="user-email"
+          type="email"
+          placeholder="you@example.com"
+          name="email"
+          autocomplete="email"
+        />
+        <p class="error email-error"></p>
+
+        <label class="field-label" for="user-mobile">Mobile</label>
+        <input
+          id="user-mobile"
+          type="text"
+          placeholder="+8801700000000"
+          name="mobile"
+          autocomplete="tel"
+        />
+        <p class="error mobile-error"></p>
+
+        <label class="field-label" for="user-password">Password</label>
+        <input
+          id="user-password"
+          type="password"
+          placeholder="At least 8 characters, 1 upper, 1 symbol"
+          name="password"
+          autocomplete="new-password"
+        />
+        <p class="error password-error"></p>
+
+        <span class="field-label">Profile photo (optional)</span>
+        <label class="avatar-upload" for="user-avatar">
+          <span class="avatar-upload-icon" aria-hidden="true">+</span>
+          <span class="avatar-upload-text">
+            <strong>Choose an image</strong>
+            <small>JPG, PNG, WebP or GIF · max 5 MB</small>
+          </span>
+          <input
+            id="user-avatar"
+            type="file"
+            name="avatar"
+            class="visually-hidden"
+            accept="image/png,image/jpeg,image/webp,image/gif"
+          />
+        </label>
+
         <div class="avatar-selected" id="avatar-selected">
           <img id="avatar-preview-image" alt="Selected avatar" />
           <span id="avatar-preview-name"></span>
@@ -67,6 +113,7 @@
           </button>
         </div>
         <p class="error avatar-error"></p>
+
         <input type="submit" value="<%= modalSubmitLabel %>" />
         <p class="error common-error"></p>
       </form>
@@ -76,23 +123,40 @@
 <script>
   //create success toast
   let successToast = Toastify({
-    text: <%- JSON.stringify(modalSuccessText)%>,
-    duration: 1000,
+    text: <%- JSON.stringify(modalSuccessText) %>,
+    duration: 1500,
   });
 
   const userModal = document.querySelector("#add-user-modal");
+  const addUserForm = document.querySelector("#add-user-form");
 
   function closeUserModal(event) {
     if (event) event.preventDefault();
     userModal.style.display = "none";
+    document.body.style.overflow = "";
   }
 
   function openUserModal(event) {
     if (event) event.preventDefault();
-    userModal.style.display = "block";
+    userModal.style.display = "flex";
+    document.body.style.overflow = "hidden";
+    setTimeout(() => addUserForm.elements.name?.focus(), 50);
   }
 
-  const form = document.querySelector("#add-user-form");
+  // close when clicking the dimmed backdrop or pressing Escape
+  userModal.addEventListener("click", (event) => {
+    if (event.target === userModal) {
+      closeUserModal();
+    }
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && userModal.style.display === "flex") {
+      closeUserModal();
+    }
+  });
+
+  const form = addUserForm;
 
   // avatar selection preview + remove
   // keep these in sync with middlerwares/users/avatarupload.js
@@ -244,7 +308,7 @@
 
         setTimeout(() => {
           location.reload();
-        }, 1000);
+        }, 900);
       }
     } catch (err) {
       commonError.textContent = "Something went wrong. Please try again.";

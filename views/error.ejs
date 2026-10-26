@@ -1,12 +1,40 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Document</title>
-  </head>
-  <body>
-    <p>error is</p>
-    <%= error %>
+<%- include('./partials/header.ejs'); %>
+
+    <%
+      const isLoggedIn =
+        typeof loggedInUser !== "undefined" &&
+        loggedInUser &&
+        loggedInUser.username;
+      const errorText =
+        typeof error !== "undefined" && error
+          ? error.stack || String(error)
+          : "An unexpected error occurred.";
+    %>
+
+    <main class="error-page">
+      <div class="error-card">
+        <img src="/images/error-illustration.svg" alt="" />
+        <span class="eyebrow">Something went wrong</span>
+        <h1>We couldn’t load that page</h1>
+        <p class="error-message">
+          The request could not be completed. You can go back to your inbox and
+          try again.
+        </p>
+
+        <details class="error-detail-wrap">
+          <summary>Technical details</summary>
+          <pre class="error-detail"><%= errorText %></pre>
+        </details>
+
+        <div class="error-actions">
+          <a class="primary-button" href="<%= isLoggedIn ? '/inbox' : '/' %>">
+            <%= isLoggedIn ? "Back to inbox" : "Back to login" %>
+          </a>
+          <% if (!isLoggedIn) { %>
+            <a class="ghost-button" href="/">Sign in</a>
+          <% } %>
+        </div>
+      </div>
+    </main>
   </body>
 </html>

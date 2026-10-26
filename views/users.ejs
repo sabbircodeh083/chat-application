@@ -1,81 +1,126 @@
 <%- include('./partials/header.ejs'); %>
     <div class="manageUser-container">
-      <div id="title">
-        <h2>Manage Users</h2>
-      </div>
+      <div class="page-header">
+        <div id="title">
+          <span class="eyebrow">Administration</span>
+          <h2>Manage users</h2>
+          <p>
+            Create accounts for your team and remove access when it is no
+            longer needed.
+          </p>
+        </div>
 
-      <div class="new-message-container new-user">
-        <a
-          href="#"
+        <button
+          type="button"
+          class="primary-button"
           onclick="openUserModal(event)"
           aria-haspopup="dialog"
           aria-controls="add-user-modal"
-          aria-label="Create new user"
-          >+</a
         >
+          <span aria-hidden="true">+</span> Add user
+        </button>
       </div>
 
       <div id="users-table">
         <table>
           <thead>
             <tr>
-              <th>Name</th>
+              <th>User</th>
               <th>Email</th>
+              <th>Role</th>
               <th>Manage</th>
             </tr>
           </thead>
-          <tbody id="users-table">
+          <tbody>
             <% users.forEach(user=>{ %>
+            <% const role = user.role || "user"; %>
             <tr id="<%= user._id %>">
               <td class="name">
-                <% if(user.avatar){ %>
-                <img src="./uploads/avatars/<%= user.avatar %>" />
-                <%}else{ %>
-                <img src="./images/nophoto.png" />
-                <% }%>
-                <span><%=user.name %></span>
+                <div class="user-cell">
+                  <img
+                    src="<%= user.avatar ? `/uploads/avatars/${user.avatar}` : '/images/nophoto.png' %>"
+                    alt=""
+                    onerror="this.src='/images/nophoto.png'"
+                  />
+                  <div class="user-cell-text">
+                    <span class="user-cell-name"><%= user.name %></span>
+                    <span class="user-cell-mobile"><%= user.mobile %></span>
+                  </div>
+                </div>
               </td>
-              <td><%=user.email %></td>
+              <td><%= user.email %></td>
+              <td>
+                <span class="role-badge role-<%= role %>"><%= role %></span>
+              </td>
               <td class="manage">
-                <img src="./images/trash.png" alt="Delete" onclick="deleteUser('<%= user._id%>')" />
+                <button
+                  type="button"
+                  class="icon-button"
+                  onclick="deleteUser('<%= user._id %>')"
+                  aria-label="Delete <%= user.name %>"
+                  title="Delete user"
+                >
+                  <img src="/images/trash.png" alt="" />
+                </button>
               </td>
             </tr>
             <% }) %>
           </tbody>
         </table>
+
+        <% if (users.length === 0) { %>
+          <div class="nothing">
+            <img src="/images/illustration.png" alt="" />
+            <p>No users yet</p>
+            <small>Use “Add user” to create the first account.</small>
+          </div>
+        <% } %>
       </div>
     </div>
+
     <%- include('./partials/add-user-modal.ejs', {
-      modalTitle: 'Create New User',
-      submitLabel: 'Submit',
+      modalTitle: 'Create new user',
+      submitLabel: 'Create user',
       formAction: '/users',
       successText: 'User was added successfully! Reloading the list...'
     }) %>
+
     <script>
-       const deleteToast=Toastify({
-        text:"User is deleted Successfully",
-        duration:3000
-       });
+      const deleteToast = Toastify({
+        text: 'User deleted successfully',
+        duration: 2000,
+      });
 
-       const deleteErrorToast=Toastify({
-        text:"could not delete the user",
-        duration:3000
-       });
+      const deleteErrorToast = Toastify({
+        text: 'Could not delete the user',
+        duration: 2200,
+      });
 
-       async  function deleteUser(_id){
-        const response= await fetch(`/users/${_id}`,{
-          method:"DELETE",
-        });
-
-        const result= await response.json();
-
-        if( Object.keys(result.errors).length>0){
-          deleteErrorToast.showToast();
-        }else{
-          deleteToast.showToast();
-          document.getElementById(_id).remove();
+      async function deleteUser(_id) {
+        const confirmed = confirm(
+          'Delete this user? Their conversations will remain, but the account and avatar will be removed.',
+        );
+        if (!confirmed) {
+          return;
         }
-       }
+
+        try {
+          const response = await fetch(`/users/${_id}`, {
+            method: 'DELETE',
+          });
+          const result = await response.json().catch(() => null);
+
+          if (!response.ok || !result || Object.keys(result.errors || {}).length > 0) {
+            deleteErrorToast.showToast();
+            return;
+          }
+
+          deleteToast.showToast();
+          document.getElementById(_id)?.remove();
+        } catch (err) {
+          deleteErrorToast.showToast();
+        }
+      }
     </script>
   </body>
 </html>

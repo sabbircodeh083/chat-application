@@ -1,83 +1,178 @@
 <%- include('./partials/header.ejs'); %>
     <div id="chat-container">
-      <div id="search-container">
-        <input
-          type="text"
-          id="conversation-search"
-          placeholder="Search by name"
-          autocomplete="off"
-          aria-label="Search conversations by partner name"
-        />
-      </div>
-      <div id="conversation-list">
-        <div class="search-empty hide" id="search-empty" role="status">
-          No conversation found
+      <aside class="sidebar" aria-label="Conversations">
+        <div id="search-container">
+          <input
+            type="text"
+            id="conversation-search"
+            placeholder="Search conversations"
+            autocomplete="off"
+            aria-label="Search conversations by partner name"
+          />
         </div>
 
-        <% Cdata.forEach(conversation => { %>
-          <!-- conversation creator is same to logged in user, so we need to show participant name and avatar -->
-          <% if(conversation.creator.id == loggedInUser.userid) { %>
-            <div class="conversation" onclick="getMessages('<%= conversation._id %>', '<%= conversation.participant.name %>')">
-              <% if (conversation.participant.avatar) { %>
-              <img src="./uploads/avatars/<%= conversation.participant.avatar %>" alt="<%= conversation.participant.name %>" />
+        <div class="sidebar-header">
+          <div>
+            <span class="sidebar-title">Messages</span>
+            <span class="sidebar-count"
+              ><%= Cdata.length %> conversation<%= Cdata.length === 1 ? "" : "s" %></span
+            >
+          </div>
+          <button
+            type="button"
+            class="new-message-container"
+            onclick="openModal()"
+            aria-label="Start a new conversation"
+            title="New conversation"
+          >
+            <span aria-hidden="true">+</span>
+          </button>
+        </div>
+
+        <div id="conversation-list">
+          <div class="search-empty hide" id="search-empty" role="status">
+            No conversations found
+          </div>
+
+          <% Cdata.forEach(conversation => { %>
+            <%
+              // the logged-in user can be either side of the conversation
+              const isCreator =
+                String(conversation.creator.id) === String(loggedInUser.userid);
+              const partner = isCreator
+                ? conversation.participant
+                : conversation.creator;
+              const last = conversation.last_message;
+              const updated =
+                last && last.date_time
+                  ? last.date_time
+                  : conversation.last_update;
+            %>
+            <div
+              class="conversation"
+              role="button"
+              tabindex="0"
+              data-conversation-id="<%= conversation._id %>"
+              data-partner-name="<%= partner.name %>"
+              aria-label="Open conversation with <%= partner.name %>"
+            >
+              <img
+                src="<%= partner.avatar ? `/uploads/avatars/${partner.avatar}` : '/images/nophoto.png' %>"
+                alt=""
+                onerror="this.src='/images/nophoto.png'"
+              />
+              <div class="title-text"><%= partner.name %></div>
+              <% if (updated) { %>
+                <time
+                  class="conversation-date"
+                  datetime="<%= new Date(updated).toISOString() %>"
+                  data-relative
+                  ><%= new Date(updated).toLocaleDateString() %></time
+                >
               <% } else { %>
-                <img src="./images/nophoto.png" alt="pI" />
+                <span class="conversation-date"></span>
               <% } %>
-              <div class="title-text"><%= conversation.participant.name %></div>
-              <div class="conversation-date"><%=conversation.last_updated%></div>
+              <div class="conversation-preview">
+                <% if (last) { %>
+                  <% if (String(last.sender.id) === String(loggedInUser.userid)) { %><span class="preview-you">You: </span><% } %>
+                  <%= last.text && last.text.trim() ? last.text : (last.attachment && last.attachment.length ? "Photo" : "Message") %>
+                <% } else { %>
+                  No messages yet — say hello
+                <% } %>
+              </div>
             </div>
-          <% } else { %>
-            <div class="conversation" onclick="getMessages('<%= conversation._id %>', '<%= conversation.creator.name %>')">
-              <% if (conversation.creator.avatar) { %>
-              <img src="./uploads/avatars/<%= conversation.creator.avatar %>" alt="<%= conversation.creator.name %>" />
-              <% } else { %>
-                <img src="./images/nophoto.png" />
-              <% } %>
-              <div class="title-text"><%= conversation.creator.name %></div>
-              <div class="conversation-date"><%= conversation.last_updated%></div>
+          <% }); %>
+
+          <!-- show no conversation placeholder image for 0 conversations -->
+          <% if(Cdata && Cdata.length === 0) { %>
+            <div class="nothing">
+              <img src="/images/illustration.png" alt="" />
+              <p>No conversations yet</p>
+              <small>Tap + to start chatting with someone.</small>
             </div>
           <% } %>
-        <% }); %>
-        
-        <!-- show no conversation placeholder image for 0 conversations -->
-        <% if(Cdata && Cdata.length === 0) { %>
-          <div class="nothing"><img src="./images/no-conversation.svg"></div>
-        <% } %>
-      </div>
-
-      <!-- open modal -->
-      <div class="new-message-container" onclick="openModal()">
-        <a href="#">+</a>
-      </div>
-      
-      <div id="chat-title">
-        <span id="conversation-partner"></span>
-        <img src="./images/trash.png" alt="Delete Conversation" onclick="handleConversationDelete()" />
-      </div>
-
-      <!-- placeholder div if no messages are in messages area -->
-      <div id="chat-message-list">
-        <div class="nothing" id="empty-chatbox">select a conversation</div>
-      </div>
-
-      <!-- send message form -->
-      <form id="chat-form" method="post" enctype="multipart/form-data">
-        <label for="attachment"><img src="./images/attachment.png" alt="Add Attachment" /></label>
-        <input
-          type="file"
-          multiple
-          name="attachment"
-          class="hide"
-          id="attachment"
-          accept="image/png,image/jpeg,image/webp,image/gif"
-        />
-        <input type="text" name="message" placeholder="Type a message" autocomplete="off" />
-        <button type="submit" id="send-button" class="send-button" aria-label="Send message">&#10148;</button>
-        <div class="chat-form-overlay">
-          <div id="attachment-preview" class="attachment-preview"></div>
-          <p id="chat-error" class="chat-error" role="alert"></p>
         </div>
-      </form>
+      </aside>
+
+      <section class="chat-panel" aria-label="Conversation">
+        <div id="chat-title">
+          <button
+            type="button"
+            class="chat-back"
+            id="chat-back"
+            aria-label="Back to conversations"
+          >
+            &#8592;
+          </button>
+          <img
+            id="chat-partner-avatar"
+            class="chat-partner-avatar"
+            src="/images/nophoto.png"
+            alt=""
+            onerror="this.src='/images/nophoto.png'"
+          />
+          <div class="chat-title-text">
+            <span id="conversation-partner">Select a conversation</span>
+            <span class="chat-status"
+              >Choose someone from your inbox to start chatting</span
+            >
+          </div>
+          <button
+            type="button"
+            class="icon-button"
+            id="delete-conversation"
+            onclick="handleConversationDelete()"
+            aria-label="Delete conversation"
+            title="Delete conversation"
+            disabled
+          >
+            <img src="/images/trash.png" alt="" />
+          </button>
+        </div>
+
+        <!-- placeholder div if no messages are in messages area -->
+        <div id="chat-message-list">
+          <div class="nothing" id="empty-chatbox">
+            <img src="/images/illustration.png" alt="" />
+            <p>Select a conversation to start chatting</p>
+            <small>Your messages will appear here.</small>
+          </div>
+        </div>
+
+        <!-- send message form -->
+        <form id="chat-form" method="post" enctype="multipart/form-data">
+          <label for="attachment" class="attach-button" title="Attach images">
+            <img src="/images/attachment.png" alt="Attach images" />
+            <input
+              type="file"
+              multiple
+              name="attachment"
+              class="visually-hidden"
+              id="attachment"
+              accept="image/png,image/jpeg,image/webp,image/gif"
+            />
+          </label>
+          <input
+            type="text"
+            name="message"
+            placeholder="Write a message..."
+            autocomplete="off"
+            aria-label="Message"
+          />
+          <button
+            type="submit"
+            id="send-button"
+            class="send-button"
+            aria-label="Send message"
+          >
+            &#10148;
+          </button>
+          <div class="chat-form-overlay">
+            <div id="attachment-preview" class="attachment-preview"></div>
+            <p id="chat-error" class="chat-error" role="alert"></p>
+          </div>
+        </form>
+      </section>
     </div>
 
     <%- include('./partials/add-conversation-modal.ejs')%>
@@ -88,8 +183,13 @@
     <script>
     const form = document.querySelector('#chat-form');
     const messageContainer = document.querySelector('#chat-message-list');
+    const chatContainer = document.querySelector('#chat-container');
     const chatTitleContainer = document.querySelector('#conversation-partner');
-    const loggedinUserId = '<%= loggedInUser.userid %>';
+    const chatStatus = document.querySelector('.chat-status');
+    const chatPartnerAvatar = document.querySelector('#chat-partner-avatar');
+    const deleteConversationButton = document.querySelector('#delete-conversation');
+    const backButton = document.querySelector('#chat-back');
+    const loggedinUserId = '<%= String(loggedInUser.userid) %>';
     const loggedinUserName = '<%= loggedInUser.username %>';
     let participant = null; // selected conversation participant object
     let current_conversation_id; // selected conversation id
@@ -100,29 +200,55 @@
     const conversationList = document.querySelector('#conversation-list');
     const searchEmpty = document.querySelector('#search-empty');
 
-    async function handleConversationDelete(){
-      const conversationDeleteFailureToast= Toastify({
-        text:"Error delete Conversation",
-        duration:1000,
-      }); 
+    function escapeHtml(value) {
+      return String(value == null ? '' : value).replace(/[&<>"']/g, (char) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;',
+      }[char]));
+    }
 
-      const conversationDeleteSuccessToast= Toastify({
-        text:"Successfull Conversation deletion",
-        duration:1000,
-      }); 
-
-      const res=await fetch(`/inbox/conversation/${current_conversation_id}`,{
-        method:"DELETE",
-      });
-      const result = await res;
-      
-      if(!result.errors){
-        conversationDeleteSuccessToast.showToast();
-        location.reload();
-      }else{
-        conversationDeleteFailureToast.showToast();
+    async function handleConversationDelete() {
+      if (!current_conversation_id) {
+        return;
       }
 
+      const confirmed = confirm(
+        'Delete this conversation and all of its messages? This cannot be undone.',
+      );
+      if (!confirmed) {
+        return;
+      }
+
+      const conversationDeleteFailureToast = Toastify({
+        text: 'Could not delete the conversation',
+        duration: 1800,
+      });
+
+      const conversationDeleteSuccessToast = Toastify({
+        text: 'Conversation deleted',
+        duration: 1500,
+      });
+
+      try {
+        const response = await fetch(
+          `/inbox/conversation/${current_conversation_id}`,
+          { method: 'DELETE' },
+        );
+        const result = await response.json().catch(() => null);
+
+        if (!response.ok || !result || result.errors) {
+          conversationDeleteFailureToast.showToast();
+          return;
+        }
+
+        conversationDeleteSuccessToast.showToast();
+        setTimeout(() => location.reload(), 500);
+      } catch (err) {
+        conversationDeleteFailureToast.showToast();
+      }
     }
 
     function filterConversations() {
@@ -157,68 +283,128 @@
       }
     });
 
+    // open a conversation from the server-rendered sidebar
+    conversationList.querySelectorAll('.conversation').forEach((row) => {
+      const openConversation = () =>
+        getMessages(
+          row.dataset.conversationId,
+          row.dataset.partnerName,
+          row,
+        );
+
+      row.addEventListener('click', openConversation);
+      row.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          openConversation();
+        }
+      });
+    });
+
+    // mobile: return from the chat pane to the conversation list
+    backButton.addEventListener('click', () => {
+      chatContainer.classList.remove('chat-open');
+    });
+
 
     // socket initialization (same origin as the page)
     const socket = io();
 
+    // keep the sidebar preview and timestamp in sync with live messages
+    function updateConversationRow(message) {
+      const row = conversationList.querySelector(
+        `.conversation[data-conversation-id="${message.conversation_id}"]`,
+      );
+
+      if (!row) {
+        return;
+      }
+
+      const preview = row.querySelector('.conversation-preview');
+      if (preview) {
+        preview.textContent = '';
+
+        if (String(message.sender.id) === loggedinUserId) {
+          const you = document.createElement('span');
+          you.className = 'preview-you';
+          you.textContent = 'You: ';
+          preview.appendChild(you);
+        }
+
+        const previewText =
+          message.message && message.message.trim()
+            ? message.message
+            : message.attachment && message.attachment.length
+              ? 'Photo'
+              : 'Message';
+        preview.appendChild(document.createTextNode(previewText));
+      }
+
+      const date = row.querySelector('.conversation-date');
+      if (date && message.date_time) {
+        date.dateTime = message.date_time;
+        date.textContent = moment(message.date_time).fromNow();
+      }
+
+      // newest conversation first
+      conversationList.prepend(row);
+    }
+
     // handle new/live incoming message from socket
-      socket.on("new_message", data => {
-        // ignore our own messages: sendMessage() reloads the conversation
-        // from the server after a successful POST, so the message is already shown
-        if (String(data.message.sender.id) === loggedinUserId) {
-          return;
-        }
+    socket.on('new_message', (data) => {
+      const message = data.message;
 
-        // only respond if current conversation is open in any client
-        if(data.message.conversation_id == current_conversation_id) {
-          // message class
-          const messageClass = data.message.sender.id === loggedinUserId ? 'you-message' : 'other-message';
-          
-          const senderAvatar = data.message.sender.avatar ? `<img src="./uploads/avatars/${data.message.sender.avatar}" alt="${data.message.sender.name}" />` : `<img src="./images/nophoto.png" alt="${data.message.sender.name}" />`;
+      updateConversationRow(message);
 
-          // message attachments
-          let attachments = '<div class="attachments">';
+      // ignore our own messages: sendMessage() reloads the conversation
+      // from the server after a successful POST, so the message is already shown
+      if (String(message.sender.id) === loggedinUserId) {
+        return;
+      }
 
-          if(data.message.attachment && data.message.attachment.length > 0) {
-            data.message.attachment.forEach(attachment => {
-              attachments += `<img src="./uploads/attachments/${attachment}" /> `;
-            });
-          }
+      // only append if the matching conversation is currently open
+      if (String(message.conversation_id) !== String(current_conversation_id)) {
+        return;
+      }
 
-          attachments += '</div>';
+      const senderName = escapeHtml(message.sender.name);
+      const senderAvatar = message.sender.avatar
+        ? `<img src="/uploads/avatars/${escapeHtml(message.sender.avatar)}" alt="${senderName}" />`
+        : `<img src="/images/nophoto.png" alt="${senderName}" />`;
 
-          let messageHTML;
+      let attachments = '<div class="attachments">';
+      if (message.attachment && message.attachment.length > 0) {
+        message.attachment.forEach((attachment) => {
+          attachments += `<img src="/uploads/attachments/${escapeHtml(attachment)}" alt="Attachment" loading="lazy" />`;
+        });
+      }
+      attachments += '</div>';
 
-          // do not show avatar for loggedin user
-          if(data.message.sender.id == loggedinUserId) {
-            messageHTML = `<div class="message-row ${messageClass}"><div class="message-content">
-              <div class="message-text">${data.message.message}</div>
-              ${attachments}
-              <div class="message-time">${moment(data.message.date_time).fromNow()}</div>
-            </div></div>`;
-          } else {
-            messageHTML = `<div class="message-row ${messageClass}"><div class="message-content">
-              ${senderAvatar}
-              <div class="message-text">${data.message.message}</div>
-              ${attachments}
-              <div class="message-time">${moment(data.message.date_time).fromNow()}</div>
-            </div></div>`;
-          }
+      const messageHTML = `<div class="message-row other-message">
+        <div class="message-content">
+          ${senderAvatar}
+          <div class="message-body">
+            <div class="message-text">${escapeHtml(message.message)}</div>
+            ${attachments}
+            <div class="message-time">${moment(message.date_time).fromNow()}</div>
+          </div>
+        </div>
+      </div>`;
 
-          // append the incoming message to the message area as last item
-          const emptyChatbox = messageContainer.querySelector('#empty-chatbox');
-          if (emptyChatbox) {
-            emptyChatbox.remove();
-          }
+      // column-reverse list: insert before the first (newest) row to append at
+      // the visual bottom
+      const emptyChatbox = messageContainer.querySelector('#empty-chatbox');
+      if (emptyChatbox) {
+        emptyChatbox.remove();
+      }
 
-          const firstMessage = messageContainer.querySelector('.message-row');
-          if (firstMessage) {
-            firstMessage.insertAdjacentHTML('beforeBegin', messageHTML);
-          } else {
-            messageContainer.insertAdjacentHTML('beforeend', messageHTML);
-          }
-        }
-      });
+      const firstMessage = messageContainer.querySelector('.message-row');
+      if (firstMessage) {
+        firstMessage.insertAdjacentHTML('beforeBegin', messageHTML);
+      } else {
+        messageContainer.insertAdjacentHTML('beforeend', messageHTML);
+      }
+    });
 
 
     // attachment handling
@@ -334,6 +520,14 @@
       renderAttachmentPreview();
     });
 
+    // open a shared photo at full size in a new tab
+    messageContainer.addEventListener('click', (event) => {
+      const image = event.target.closest('.attachments img');
+      if (image) {
+        window.open(image.src, '_blank', 'noopener');
+      }
+    });
+
 
 
     // renders the placeholder shown when a conversation has no messages.
@@ -343,45 +537,61 @@
       const empty = document.createElement('div');
       empty.className = 'nothing';
       empty.id = 'empty-chatbox';
-      empty.textContent = text;
+
+      const icon = document.createElement('img');
+      icon.src = '/images/illustration.png';
+      icon.alt = '';
+
+      const message = document.createElement('p');
+      message.textContent = text;
+
+      const hint = document.createElement('small');
+      hint.textContent = 'Send the first message to get started.';
+
+      empty.append(icon, message, hint);
       messageContainer.replaceChildren(empty);
     }
 
     function buildMessageHTML(message) {
       const isMine = String(message.sender.id) === loggedinUserId;
       const messageClass = isMine ? 'you-message' : 'other-message';
+      const senderName = escapeHtml(message.sender.name);
       const senderAvatar = message.sender.avatar
-        ? `./uploads/avatars/${message.sender.avatar}`
-        : './images/nophoto.png';
+        ? `/uploads/avatars/${escapeHtml(message.sender.avatar)}`
+        : '/images/nophoto.png';
       const showAvatar = isMine
         ? ''
-        : `<img src="${senderAvatar}" alt="${message.sender.name}" />`;
+        : `<img src="${senderAvatar}" alt="${senderName}" />`;
 
-      let attachments = "<div class='attachments'>";
+      let attachments = '<div class="attachments">';
 
       if (message.attachment && message.attachment.length > 0) {
         message.attachment.forEach((item) => {
-          attachments += `<img src="./uploads/attachments/${item}" /> `;
+          attachments += `<img src="/uploads/attachments/${escapeHtml(item)}" alt="Attachment" loading="lazy" />`;
         });
       }
       attachments += '</div>';
 
-      return `<div class="message-row ${messageClass}"><div class="message-content">
-              ${showAvatar}
-              <div class="message-text">${message.text}</div>
-              ${attachments}
-              <div class="message-time">${moment(message.date_time).fromNow()}</div>
-            </div></div>`;
+      return `<div class="message-row ${messageClass}">
+        <div class="message-content">
+          ${showAvatar}
+          <div class="message-body">
+            <div class="message-text">${escapeHtml(message.text)}</div>
+            ${attachments}
+            <div class="message-time">${moment(message.date_time).fromNow()}</div>
+          </div>
+        </div>
+      </div>`;
     }
 
     // incremented on every conversation switch so a slow response for an older
     // click cannot overwrite the conversation the user is looking at now
     let messagesRequestId = 0;
 
-    async function getMessages(conversationId, partnerName){
+    async function getMessages(conversationId, partnerName, rowElement) {
       const messagesFailureToast = Toastify({
-        text: "Error Loading message",
-        duration: 1000,
+        text: 'Could not load the conversation',
+        duration: 1800,
       });
 
       const requestId = ++messagesRequestId;
@@ -405,7 +615,20 @@
         participant = data.participant;
         current_conversation_id = conversationId;
         chatTitleContainer.textContent = partnerName;
-        form.style.visibility = "visible";
+        chatStatus.textContent = 'Private conversation';
+        chatPartnerAvatar.src = participant?.avatar
+          ? `/uploads/avatars/${participant.avatar}`
+          : '/images/nophoto.png';
+        chatPartnerAvatar.alt = partnerName;
+        form.style.visibility = 'visible';
+        deleteConversationButton.disabled = false;
+
+        conversationList.querySelectorAll('.conversation').forEach((row) => {
+          row.classList.toggle('active', row === rowElement);
+        });
+
+        // on narrow screens this reveals the chat pane
+        chatContainer.classList.add('chat-open');
 
         const messages = Array.isArray(data.messages) ? data.messages : [];
 
@@ -505,7 +728,11 @@
         // clear the form and reload the conversation so the new message shows up
         form.reset();
         renderAttachmentPreview();
-        await getMessages(current_conversation_id, participant.name);
+        await getMessages(
+          current_conversation_id,
+          participant.name,
+          conversationList.querySelector('.conversation.active'),
+        );
       } catch (err) {
         showChatError(
           "Could not send the message. Please check your connection and try again.",
@@ -514,6 +741,14 @@
         sendButton.disabled = false;
       }
     }
+
+    // turn the server-rendered timestamps into "2 hours ago" style labels
+    document.querySelectorAll('time[data-relative]').forEach((element) => {
+      const value = new Date(element.getAttribute('datetime'));
+      if (!Number.isNaN(value.getTime())) {
+        element.textContent = moment(value).fromNow();
+      }
+    });
   </script>
   </body>
   
